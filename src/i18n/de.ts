@@ -461,6 +461,10 @@ export const de: Record<string, string> = {
   "deletedPlaylists_one": "{count} Wiedergabeliste gelöscht",
   "deletedPlaylists_other": "{count} Wiedergabelisten gelöscht",
   "removedFromPlaylist_one": "{count} Song aus der Wiedergabeliste entfernt",
-  "removedFromPlaylist_other": "{count} Songs aus der Wiedergabeliste entfernt"
+  "removedFromPlaylist_other": "{count} Songs aus der Wiedergabeliste entfernt",
+  "playingNextSongs_one": "Als Nächstes: {count} Titel",
+  "playingNextSongs_other": "Als Nächstes: {count} Titel",
+  "queuedSongs_one": "{count} Titel zur Warteschlange hinzugefügt",
+  "queuedSongs_other": "{count} Titel zur Warteschlange hinzugefügt"
 }
 export default de
