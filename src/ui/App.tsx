@@ -1,5 +1,7 @@
-import { useState } from 'preact/hooks'
-import { ready, toast, engineState, queueIds, bookState } from '../state'
+import { useEffect, useState } from 'preact/hooks'
+import { ready, toast, engineState, queueIds, bookState, settings } from '../state'
+import { LockScreen, initLock, locked } from './Security'
+import { loadLastFm } from '../connect/scrobbler'
 import { Library } from './Library'
 import { Files } from './Files'
 import { Settings } from './Settings'
@@ -21,6 +23,12 @@ const labels: Record<Tab, string> = { library: 'Library', studio: 'Studio', conn
 export function App() {
   const [tab, setTab] = useState<Tab>('library')
   const [open, setOpen] = useState(false)
+  useEffect(() => { void initLock(); void loadLastFm() }, [])
+  useEffect(() => {
+    const r = document.documentElement, st = settings.value
+    r.style.fontSize = `${17 * st.textScale}px`
+    r.classList.toggle('reduce-motion', st.reduceMotion); r.classList.toggle('high-contrast', st.highContrast)
+  }, [settings.value.textScale, settings.value.reduceMotion, settings.value.highContrast])
   const bookActive = bookState.value.status !== 'idle' && !!bookState.value.trackId
   const hasTrack = bookActive || (engineState.value.index >= 0 && !!queueIds.value[engineState.value.index])
   return (
@@ -36,6 +44,7 @@ export function App() {
           </button>))}
       </nav>
       {open && (bookActive ? <BookSheet onClose={() => setOpen(false)} /> : <NowPlaying onClose={() => setOpen(false)} />)}
+      {locked.value && <LockScreen />}
       {toast.value && <div class="toast" role="status">{toast.value}</div>}
     </div>
   )

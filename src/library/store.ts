@@ -10,8 +10,8 @@ const docsDB: UseStore = createStore('seam-docs', 'kv')
 export interface StoredTrack extends Track { fingerprint?: string; fileName?: string; sampleRate?: number; codec?: string; lufs?: number; peak?: number; kind?: 'music' | 'audiobook'; lyrics?: string; comment?: string }
 export interface Playlist { id: string; name: string; trackIds: string[]; updatedAt: number }
 import { defaultFx, type FxSettings } from '../audio/presets'
-export interface Settings { crossfade: number; repeat: 'off' | 'all' | 'one'; fx: FxSettings; normalize: boolean; targetLufs: number; bookRate: number; skipBack: number; skipForward: number; visualizer: 'bars' | 'wave' | 'radial' | 'off' }
-export const defaultSettings: Settings = { crossfade: 0, repeat: 'off', fx: defaultFx, normalize: false, targetLufs: -14, bookRate: 1, skipBack: 15, skipForward: 30, visualizer: 'bars' }
+export interface Settings { crossfade: number; repeat: 'off' | 'all' | 'one'; fx: FxSettings; normalize: boolean; targetLufs: number; bookRate: number; skipBack: number; skipForward: number; visualizer: 'bars' | 'wave' | 'radial' | 'off'; textScale: number; reduceMotion: boolean; highContrast: boolean; lockAfter: number }
+export const defaultSettings: Settings = { crossfade: 0, repeat: 'off', fx: defaultFx, normalize: false, targetLufs: -14, bookRate: 1, skipBack: 15, skipForward: 30, visualizer: 'bars', textScale: 1, reduceMotion: false, highContrast: false, lockAfter: 60 }
 
 export async function loadTracks(): Promise<StoredTrack[]> {
   const ks = await keys(tracksDB)
@@ -40,6 +40,12 @@ import type { Source } from '../connect/sources'
 export const loadSources = async () => (await get<Source[]>('sources', docsDB)) ?? []
 export const saveSources = (s: Source[]) => set('sources', s, docsDB)
 
+import type { PasscodeRecord } from '../security/passcode'
+export const loadPasscode = () => get<PasscodeRecord>('passcode', docsDB)
+export const savePasscode = (r: PasscodeRecord | null) => (r ? set('passcode', r, docsDB) : del('passcode', docsDB))
+
+/** Raw access for backup/restore. */
+export const rawStores = { tracksDB, filesDB, artDB, docsDB }
 export const loadPlaylists = async () => (await get<Playlist[]>('playlists', docsDB)) ?? []
 export const savePlaylists = (p: Playlist[]) => set('playlists', p, docsDB)
 export const loadArrangements = async () => (await get<Arrangement[]>('arrangements', docsDB)) ?? []

@@ -8,19 +8,11 @@ import { arrangements, decodeTrackUncached, engineState, getEngine, notify, play
 import { renderMix } from '../audio/render'
 import { analyzeTrack, type TrackAnalysis } from '../studio/analysis'
 import { playArrangement, previewTransition } from '../studio/playback'
-import { Art, fmt } from './common'
+import { Art, fmt, saveBlob } from './common'
 
 const currentId = signal<string | null>(null)
 const selected = signal(0)
 const fx = (n: number, d = 2) => n.toFixed(d)
-
-async function saveBlob(blob: Blob, name: string) {
-  const file = new File([blob], name, { type: blob.type })
-  const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean }
-  if (nav.canShare?.({ files: [file] })) { try { await nav.share({ files: [file], title: name }); return } catch { /* cancelled → fall through to download */ } }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove()
-  setTimeout(() => URL.revokeObjectURL(a.href), 60_000)
-}
 
 function Waveform({ a, index, onChange }: { a: TrackAnalysis | null; index: number; onChange: (p: { trimStart?: number; trimEnd?: number }) => void }) {
   const ref = useRef<HTMLCanvasElement>(null)

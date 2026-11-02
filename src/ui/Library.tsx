@@ -3,6 +3,7 @@ import { signal } from '@preact/signals'
 import { bookmarks, bookState, createPlaylist, deletePlaylist, engineState, playBook, playBookmark, playTracks, playlists, positions, queueIds, removeBookmark, removeTrack, toggleFavorite, tracks, trackById, updatePlaylist, updateTrack, notify, shuffle } from '../state'
 import { groupAlbums, groupArtists, groupGenres, recents, searchTracks, sortTracks, unplayed, type Track, type TrackGroup } from '../library/model'
 import { EditTrack } from './Edit'
+import { exportWithTags } from '../library/exportTags'
 import { ActionMenu, Art, fmt, type MenuItem } from './common'
 
 type Page = { kind: 'root' } | { kind: 'songs' | 'favorites' | 'recents' | 'unplayed' | 'albums' | 'artists' | 'genres' | 'playlists' | 'audiobooks' | 'bookmarks' } | { kind: 'group'; title: string; ids: string[] } | { kind: 'playlist'; id: string }
@@ -28,6 +29,7 @@ function SongRow({ t, list, i }: { t: Track; list: Track[]; i: number }) {
     ...playlists.value.map(p => ({ label: `Add to “${p.name}”`, run: () => { if (!p.trackIds.includes(t.id)) void updatePlaylist(p.id, { trackIds: [...p.trackIds, t.id] }); notify(`Added to ${p.name}`) } })),
     { label: 'New playlist with this song…', run: () => { const n = prompt('Playlist name'); if (n) void createPlaylist(n, [t.id]) } },
     { label: 'Edit info…', run: () => setEdit(true) },
+    { label: 'Export file with edited tags (MP3/FLAC)', run: () => void exportWithTags(t.id) },
     { label: 'Delete from library', danger: true, run: () => { if (confirm(`Delete “${t.title}” from this device?`)) void removeTrack(t.id) } },
   ].filter(x => x.label !== 'Play next in queue')
   return (

@@ -1,5 +1,9 @@
 import { Sound } from './Sound'
+import { AccessibilitySettings, BackupSettings, LastFmSettings } from './SettingsMore'
+import { PasscodeSettings } from './Security'
 import { getEngine, settings, updateSettings } from '../state'
+
+const SectionTitle = ({ children }: { children: unknown }) => <div class="hint" style={{ margin: '18px 16px 0', textTransform: 'uppercase' }}>{children as never}</div>
 
 export function Settings() {
   const s = settings.value
@@ -23,6 +27,11 @@ export function Settings() {
       </div>
       <Sound />
       <div class="hint">Gapless playback is on whenever crossfade is off. Per-transition crossfades for EPs are set in Studio.</div>
+      <SectionTitle>Accessibility</SectionTitle><AccessibilitySettings />
+      <SectionTitle>Last.fm</SectionTitle><LastFmSettings />
+      <SectionTitle>Privacy</SectionTitle><PasscodeSettings />
+      <div class="hint">The passcode hides SEAM’s screens on this device. It is a convenience lock, not encryption: the files themselves are not encrypted.</div>
+      <SectionTitle>Backup &amp; restore</SectionTitle><BackupSettings />
       <div class="group">
         <div class="kv"><span>Installed as app</span><span>{standalone ? 'Yes' : 'No — Share → Add to Home Screen'}</span></div>
         <div class="kv"><span>Audio output rate</span><span>{getEngine().ctx.sampleRate} Hz</span></div>

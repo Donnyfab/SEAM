@@ -23,3 +23,13 @@ export function ActionMenu({ items, onClose }: { items: MenuItem[]; onClose: () 
 }
 
 export function fmtBytes(n: number) { return n > 1e9 ? `${(n / 1e9).toFixed(2)} GB` : `${(n / 1e6).toFixed(1)} MB` }
+
+/** Save/share a file: iOS share sheet when available, otherwise a normal download. */
+export async function saveBlob(blob: Blob, name: string) {
+  const file = new File([blob], name, { type: blob.type })
+  const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean }
+  if (nav.canShare?.({ files: [file] })) { try { await nav.share({ files: [file], title: name }); return } catch { /* cancelled → fall through to download */ } }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove()
+  setTimeout(() => URL.revokeObjectURL(a.href), 60_000)
+}
+

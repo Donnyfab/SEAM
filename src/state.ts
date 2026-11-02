@@ -302,13 +302,17 @@ effect(() => {
   if (s.status === 'idle') lastCounted = ''
 })
 
-export async function boot() {
+export async function reloadAll() {
   const [t, p, a, s, bm, pos] = await Promise.all([loadTracks(), loadPlaylists(), loadArrangements(), loadSettings(), loadBookmarks(), loadPositions()])
   bookmarks.value = bm; positions.value = pos
+  tracks.value = t; playlists.value = p; arrangements.value = a; settings.value = s
   sources.value = await loadSources()
+}
+
+export async function boot() {
+  await reloadAll()
   setSourceSaver(saveSource)
   try { const s = await finishAuth(); if (s) { await saveSource(s); notify(`Connected to ${s.name}`) } } catch (e) { notify(e instanceof Error ? e.message : 'Sign-in failed') }
-  tracks.value = t; playlists.value = p; arrangements.value = a; settings.value = s
   try { await navigator.storage?.persist?.() } catch { /* best effort */ }
   ready.value = true
 }

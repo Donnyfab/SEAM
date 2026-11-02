@@ -89,3 +89,10 @@ label.field { display: flex; align-items: center; justify-content: space-between
 
 select { color: var(--fg); }
 .btn:disabled, .row:disabled { opacity: .4; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+@media (prefers-reduced-motion: reduce) { .sheet { animation: none; } }
+.high-contrast { --fg2: var(--fg); --sep: currentColor; --accent: #3d9bff; }
+@media (prefers-color-scheme: light) { .high-contrast { --accent: #0040dd; } }
+.high-contrast .group { outline: 1px solid var(--fg2); }
