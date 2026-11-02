@@ -48,3 +48,7 @@
 - Pushed `codex/t075-compact-design` and opened https://github.com/Donnyfab/SEAM/pull/1 with both T074 and T075. PR is mergeable; a `/SEAM/` production build also passed.
 - Live GitHub Pages is still the successful `fc2af70` deployment (run 41485203609). Phone users will not receive the fixes until PR #1 merges to `main` and the Pages workflow succeeds.
 - `AGENTS.md` says "Claude merges." Merge ownership is the remaining step; requested an owner override before Codex merges/deploys.
+
+## Done: delivery policy update (2026-11-02)
+- Owner explicitly instructed: "GOING FORWARD ALWAYS MERGE AND DEPLOY ANY CHANGES YOU MAKE". Updated AGENTS.md to persist this standing authorization; agents now push, merge and verify deployment without requesting merge approval again. This supersedes all earlier Claude-only merge handoff notes.
+- T074/T075 implementation and validation are complete. PR #1 contains both; merge to main triggers the existing GitHub Pages workflow. Verify that workflow and the live bundle before reporting deployment complete.

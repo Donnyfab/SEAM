@@ -10,4 +10,4 @@ Read HANDOFF.md first, then only the task you were assigned in TASKS.md. Do not 
 - TypeScript strict. No `any`. Pure functions over typed arrays; no hidden globals. No third-party deps without owner approval.
 - Do not add npm dependencies. Never write secrets/API keys to the repo. Never run destructive git/file commands without owner approval.
 - No placeholder buttons: a feature is either working and tested, or absent and listed in ROADMAP.md as not done.
-- When finished: update TASKS.md status, append to HANDOFF.md "Done", commit on your branch. Claude merges.
+- When finished: update TASKS.md status, append to HANDOFF.md "Done", commit and push your task branch, merge the pull request into main, and verify the GitHub Pages deployment and live site. The owner has authorized agents to merge and deploy completed changes without asking again (2026-11-02). This replaces the previous "Claude merges" rule.
