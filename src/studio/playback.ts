@@ -10,7 +10,7 @@ export async function playArrangement(a: Arrangement, fromIndex = 0, markAs: str
   for (const c of a.clips) {
     const t = c.trackId ? trackById.value.get(c.trackId) : undefined
     if (!t) continue
-    items.push({ ...toPlayItem(t), trimStart: c.trimStart, trimEnd: c.trimEnd, fadeIn: c.fadeIn, fadeOut: c.fadeOut })
+    items.push({ ...toPlayItem(t), gainFor: undefined, trimStart: c.trimStart, trimEnd: c.trimEnd, fadeIn: c.fadeIn, fadeOut: c.fadeOut })
     ids.push(t.id)
   }
   if (!items.length) return
@@ -18,6 +18,7 @@ export async function playArrangement(a: Arrangement, fromIndex = 0, markAs: str
   queueIds.value = ids
   playingArrangement.value = markAs
   e.repeat = 'off'
+  e.setFxRouting({ bypass: true }) // dry, un-normalized: what you hear is what the export renders
   e.setItems(items)
   e.transitionAfter = i => makeTransition(effectiveOverlap(a, i), a.transitions[i]?.curve ?? 'equalPower')
   await e.play(Math.min(fromIndex, items.length - 1))

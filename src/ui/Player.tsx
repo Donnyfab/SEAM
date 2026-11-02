@@ -75,7 +75,7 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
             onChange={ev => void updateSettings({ crossfade: Number((ev.target as HTMLInputElement).value) })} />
         </div>
       </div>
-      <div class="hint" style={{ margin: '8px 4px' }}>Crossfade applies from the next transition on. 0 s plays tracks back-to-back with no gap.</div>
+      <div class="hint" style={{ margin: '8px 4px' }}>The join that is already scheduled keeps its old setting; later joins use the new value (seeking applies it right away). 0 s plays tracks back-to-back with no gap.</div>
       <h3 style={{ margin: '12px 0 4px' }}>Up next</h3>
       <div class="group" style={{ margin: 0 }}>
         {queueIds.value.map((qid, i) => { const q = trackById.value.get(qid); return q ? (

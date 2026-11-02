@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EQ_BANDS, EQ_PRESETS, defaultFx, distortionCurve, normalizeFx, reverbImpulse } from '../src/audio/presets'
+import { EQ_BANDS, EQ_PRESETS, defaultFx, distortionCurve, isNeutral, normalizeFx, reverbImpulse } from '../src/audio/presets'
 
 describe('fx presets', () => {
   it('every preset has one gain per band', () => { for (const g of Object.values(EQ_PRESETS)) expect(g).toHaveLength(EQ_BANDS.length) })
@@ -19,5 +19,12 @@ describe('fx presets', () => {
     expect(Array.from(a!.slice(0, 5))).toEqual(Array.from(b!.slice(0, 5)))
     const e = (x: Float32Array) => x.reduce((s, v) => s + v * v, 0)
     expect(e(a!.slice(0, 4000))).toBeGreaterThan(e(a!.slice(4000)))
+  })
+  it('detects neutral settings', () => {
+    expect(isNeutral(undefined)).toBe(true)
+    expect(isNeutral({ delayTime: 0.9, delayFeedback: 0.8 })).toBe(true) // inaudible while mix = 0
+    expect(isNeutral({ preamp: 1 })).toBe(false)
+    expect(isNeutral({ eq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5] })).toBe(false)
+    expect(isNeutral({ compressor: true })).toBe(false)
   })
 })

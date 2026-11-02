@@ -1,5 +1,6 @@
 import { signal, computed, effect } from '@preact/signals'
 import { PlaybackEngine, type EngineState, type PlayItem } from './audio/engine'
+import { isNeutral } from './audio/presets'
 import { gainForTarget, measureLufs, samplePeak } from './audio/loudness'
 import { makeTransition } from './core/crossfade'
 import { shuffleUpcoming, makeQueue } from './core/queue'
@@ -67,11 +68,21 @@ async function measureOnce(id: string, buf: AudioBuffer) {
   await saveTrack(next)
 }
 
+/** Decode without keeping the PCM around (used by export so only one track is resident at a time). */
+export async function decodeTrackUncached(id: string, ctx: BaseAudioContext): Promise<AudioBuffer> {
+  const hit = decoded.get(id)
+  if (hit) return hit
+  const blob = await loadFile(id)
+  if (!blob) throw new Error('Audio file missing from storage')
+  return ctx.decodeAudioData(await blob.arrayBuffer())
+}
+
 let engine: PlaybackEngine | null = null
 export function getEngine(): PlaybackEngine {
   if (engine) return engine
   engine = new PlaybackEngine()
   engine.fx.apply(settings.value.fx)
+  engine.setFxRouting({ neutral: isNeutral(settings.value.fx) })
   engine.subscribe(s => { engineState.value = s })
   return engine
 }
@@ -105,6 +116,7 @@ export async function playTracks(list: StoredTrack[], start = 0) {
   }
   queueIds.value = ids
   playingArrangement.value = null
+  e.setFxRouting({ bypass: false })
   e.transitionAfter = undefined
   e.crossfade = settings.value.crossfade
   e.repeat = settings.value.repeat
@@ -148,7 +160,7 @@ export async function setArrangements(list: Arrangement[]) { arrangements.value 
 export async function updateSettings(p: Partial<Settings>) {
   settings.value = { ...settings.value, ...p }
   await saveSettings(settings.value)
-  if (engine) { engine.crossfade = settings.value.crossfade; engine.repeat = settings.value.repeat; engine.fx.apply(settings.value.fx) }
+  if (engine) { engine.crossfade = settings.value.crossfade; engine.repeat = settings.value.repeat; engine.fx.apply(settings.value.fx); engine.setFxRouting({ neutral: isNeutral(settings.value.fx) }) }
 }
 
 // Count a play when a new track becomes current.

@@ -52,3 +52,9 @@ export function reverbImpulse(sampleRate: number, seconds = 2.2, decay = 3, seed
   const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296) * 2 - 1
   return [0, 1].map(() => { const a = new Float32Array(len); for (let i = 0; i < len; i++) a[i] = rnd() * Math.pow(1 - i / len, decay); return a })
 }
+
+/** True when every effect is at its neutral setting (audio can bypass the chain entirely). */
+export function isNeutral(p: Partial<FxSettings> | undefined): boolean {
+  const f = normalizeFx(p)
+  return f.eq.every(v => v === 0) && f.preamp === 0 && f.reverb === 0 && f.delayMix === 0 && f.drive === 0 && !f.compressor
+}

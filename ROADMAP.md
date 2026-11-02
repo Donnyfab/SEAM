@@ -3,8 +3,8 @@
 
 ## Playback
 - ✅ MP3, AAC, M4A, ALAC, WAV, AIFF, FLAC (whatever Safari's CoreAudio decodes) · ⚠ OGG/Opus/WMA/APE need WASM decoders (⬜)
-- ✅ Gapless (sample-accurate, verified 0 ms gap in WebKit-class engine) · ✅ crossfade 0–15 s, equal-power/linear
-- ✅ Repeat/shuffle, queue list, seek, prev/next · ✅ Lock-screen/headphone controls via Media Session (iOS behavior to verify)
+- ✅ Gapless (sample-accurate scheduling; 0 ms gap measured in desktop Chromium — iPhone not yet tested) · ✅ crossfade 0–15 s, equal-power/linear
+- ✅ Repeat/shuffle, queue list, seek, prev/next · 🟡 Lock-screen/headphone controls via Media Session (implemented; iOS behavior unverified)
 - ✅ 10-band EQ + 8 presets + preamp/auto-headroom, reverb, delay, distortion, compressor (Settings → Sound) · ✅ loudness normalization (EBU R128 LUFS, target selectable) · ⬜ playback speed + position memory · ⬜ visualizer (AnalyserNode) · ⬜ spatial (basic HRTF panner only)
 - ⚠ Background playback: unverified on iOS — run /spike.html (see ARCHITECTURE risks)
 - ⚠ AirPlay: system output routing works via Control Center; no in-app picker for Web Audio

@@ -4,7 +4,7 @@ import {
   appendClip, effectiveOverlap, formatTime, makeArrangement, makeClip, moveClip, playableDuration, removeClip, setTransition,
   timeline, totalDuration, tracklistText, updateClip, type Arrangement,
 } from '../core/arrangement'
-import { arrangements, decodeTrack, engineState, getEngine, notify, playingArrangement, setArrangements, trackById, tracks } from '../state'
+import { arrangements, decodeTrackUncached, engineState, getEngine, notify, playingArrangement, setArrangements, trackById, tracks } from '../state'
 import { renderMix } from '../audio/render'
 import { analyzeTrack, type TrackAnalysis } from '../studio/analysis'
 import { playArrangement, previewTransition } from '../studio/playback'
@@ -129,10 +129,12 @@ export function Studio() {
 
   const exportMix = async () => {
     if (!a.clips.length) return
+    const missing = a.clips.filter(c => !c.trackId || !trackById.value.has(c.trackId))
+    if (missing.length) return notify(`Can't export: ${missing.map(c => c.title).join(', ')} was deleted from the library`)
     setBusy('Rendering 0%')
     try {
       const ctx = getEngine().ctx
-      const blob = await renderMix(a, id => decodeTrack(id, ctx), { sampleRate: ctx.sampleRate, bitDepth: 16, onProgress: (d, t) => setBusy(`Rendering ${Math.round((d / t) * 100)}%`) })
+      const blob = await renderMix(a, id => decodeTrackUncached(id, ctx), { sampleRate: ctx.sampleRate, bitDepth: 16, onProgress: (d, t) => setBusy(`Rendering ${Math.round((d / t) * 100)}%`) })
       await saveBlob(blob, `${a.name} - preview mix.wav`)
       notify(`Mix ready (${(blob.size / 1e6).toFixed(0)} MB)`)
     } catch (e) { notify(`Render failed: ${e instanceof Error ? e.message : e}`) }
@@ -169,6 +171,7 @@ export function Studio() {
         <span class="s num" style={{ marginLeft: 'auto', alignSelf: 'center', color: 'var(--fg2)' }}>{a.clips.length} tracks · {formatTime(total)}</span>
       </div>
 
+      <div class="hint" style={{ margin: '0 16px 6px' }}>Studio preview is dry — no EQ, effects or volume normalization — so it matches the exported mix.</div>
       {!a.clips.length && <div class="empty">Add songs to build your sequence.</div>}
       {a.clips.length > 0 && (
         <div class="timeline" aria-label="Arrangement timeline">

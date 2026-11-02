@@ -45,6 +45,8 @@ export class PlaybackEngine {
   readonly ctx: AudioContext
   readonly master: GainNode
   readonly fx: EffectsChain
+  private fxBypass = false
+  private fxNeutral = true
   items: PlayItem[] = []
   repeat: RepeatMode = 'off'
   /** global crossfade seconds used unless transitionAfter() overrides */
@@ -60,7 +62,7 @@ export class PlaybackEngine {
     this.ctx = ctx ?? new AC({ latencyHint: 'playback' })
     this.master = this.ctx.createGain()
     this.fx = new EffectsChain(this.ctx)
-    this.master.connect(this.fx.input)
+    this.master.connect(this.ctx.destination)
     this.fx.output.connect(this.ctx.destination)
     try { (navigator as unknown as { audioSession?: { type: string } }).audioSession && ((navigator as unknown as { audioSession: { type: string } }).audioSession.type = 'playback') } catch { /* optional API */ }
     this.ctx.addEventListener('statechange', () => this.maybeRecover())
@@ -79,6 +81,15 @@ export class PlaybackEngine {
   }
 
   setItems(items: PlayItem[]) { this.items = items }
+
+  /** Studio preview is dry so it matches the exported mix; neutral effect settings are also routed around the chain (saves CPU/battery). */
+  setFxRouting(opts: { bypass?: boolean; neutral?: boolean }) {
+    if (opts.bypass !== undefined) this.fxBypass = opts.bypass
+    if (opts.neutral !== undefined) this.fxNeutral = opts.neutral
+    const direct = this.fxBypass || this.fxNeutral
+    try { this.master.disconnect() } catch { /* not connected */ }
+    this.master.connect(direct ? this.ctx.destination : this.fx.input)
+  }
 
   async play(index: number, offset = 0): Promise<void> {
     if (!this.items[index]) return
@@ -166,7 +177,7 @@ export class PlaybackEngine {
       this.voices = this.voices.filter(v => v !== voice)
       if (gen === this.gen && nextI === null && this.voices.length === 0) this.set({ status: 'idle' })
     }
-    this.set({ duration: dur })
+    if (!prev) this.set({ duration: dur })
 
     if (nextI !== null && nextItem) {
       const go = () => void this.scheduleNext(nextI, nextItem, t0 + dur - overlapOut, overlapOut, tr.curve, gen, voice)
@@ -189,14 +200,19 @@ export class PlaybackEngine {
     }
   }
 
+  private flipTo(index: number) {
+    const v = this.voices.find(x => x.index === index && !x.ended)
+    this.set(v ? { index, duration: v.dur } : { index })
+  }
+
   /** Flip the reported index when the scheduled voice actually begins. */
   private pendingIndexSwitch(index: number, t0: number, gen: number) {
     const ms = Math.max(0, (t0 - this.ctx.currentTime) * 1000)
-    setTimeout(() => { if (gen === this.gen && this.state.status === 'playing') this.set({ index }) }, ms)
+    setTimeout(() => { if (gen === this.gen && this.state.status === 'playing') this.flipTo(index) }, ms)
     // Also fall back to polling so a throttled timer does not leave the UI stale.
     const iv = setInterval(() => {
       if (gen !== this.gen) return clearInterval(iv)
-      if (this.ctx.currentTime >= t0) { clearInterval(iv); if (this.state.index !== index && this.state.status === 'playing') this.set({ index }) }
+      if (this.ctx.currentTime >= t0) { clearInterval(iv); if (this.state.index !== index && this.state.status === 'playing') this.flipTo(index) }
     }, 250)
   }
 
