@@ -79,6 +79,17 @@ await test('studio and connect screens load', async () => {
   await tab(2).click(); await page.waitForSelector('.large-title'); assert.match(await page.locator('.large-title').innerText(), /Studio/)
   await tab(3).click(); await page.waitForSelector('.large-title'); assert.match(await page.locator('.large-title').innerText(), /Connect/)
 })
+await test('studio: add songs from a 3000-song picker, analyse waveform on a worker, no errors', async () => {
+  await tab(2).click(); await page.waitForSelector('.large-title')
+  if (await page.locator('button', { hasText: 'Start an arrangement' }).count()) { await page.locator('button', { hasText: 'Start an arrangement' }).click(); await page.waitForTimeout(300) }
+  const nameBox = page.locator('.glass-dialog input'); if (await nameBox.count()) { await nameBox.fill('E2E EP'); await page.locator('.glass-dialog button[type=submit]').click() }
+  await page.locator('button', { hasText: 'Add songs' }).first().click(); await page.waitForSelector('.sheet .vrow')
+  assert.ok((await page.locator('.sheet .vrow').count()) < 60)
+  await page.locator('.sheet .vrow button').nth(0).click(); await page.locator('.sheet .vrow button').nth(1).click()
+  await page.locator('.sheet .nav .side.right').click(); await page.waitForSelector('.clipbox')
+  await page.waitForFunction(() => !document.body.innerText.includes('Analysing'), null, { timeout: 15000 })
+  assert.ok(await page.locator('.studio-wave canvas').count())
+})
 await test('no uncaught page errors', async () => { assert.deepEqual(errors, []) })
 
 for (const [r, n] of results) console.log(r, n)

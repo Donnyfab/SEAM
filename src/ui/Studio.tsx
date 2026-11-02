@@ -10,6 +10,7 @@ import { renderMix } from '../audio/render'
 import { analyzeTrack, type TrackAnalysis } from '../studio/analysis'
 import { playArrangement, previewTransition } from '../studio/playback'
 import { Art, fmt, saveBlob, useSheet } from './common'
+import { VirtualList } from './VirtualList'
 
 const currentId = signal<string | null>(null)
 const exportDepth = signal<16 | 24 | 32>(16)
@@ -57,10 +58,10 @@ function AddTracks({ onAdd, onClose }: { onAdd: (ids: string[]) => void; onClose
     <div class="sheet" role="dialog" aria-modal="true" aria-label={translate("Add songs")} ref={ref} tabIndex={-1}>
       <div class="nav" style={{ margin: '-12px -24px 8px', position: 'sticky' }}><button class="side" onClick={onClose}>{translate("Cancel")}</button><h1>{translate("Add songs")}</h1><button class="side right" disabled={!pick.length} onClick={() => { onAdd(pick); onClose() }}>{translate("Add ")}{pick.length || ''}</button></div>
       {!tracks.value.length && <div class="empty">{translate("Import music first: Library › Import & storage.")}</div>}
-      <div class="group" style={{ margin: 0 }}>{tracks.value.map(t => (
-        <button class={`row${pick.includes(t.id) ? ' active' : ''}`} onClick={() => setPick(p => (p.includes(t.id) ? p.filter(x => x !== t.id) : [...p, t.id]))}>
+      <div class="group" style={{ margin: 0 }}><VirtualList items={tracks.value} keyOf={t => t.id} render={t => (
+        <button class={`row${pick.includes(t.id) ? ' active' : ''}`} style={{ height: '100%' }} onClick={() => setPick(p => (p.includes(t.id) ? p.filter(x => x !== t.id) : [...p, t.id]))}>
           <Art id={t.id} /><div class="grow"><div class="t">{t.title}</div><div class="s">{t.artist} · {fmt(t.duration)}</div></div><span>{pick.includes(t.id) ? `✓ ${pick.indexOf(t.id) + 1}` : ''}</span>
-        </button>))}</div>
+        </button>)} /></div>
     </div>
   )
 }

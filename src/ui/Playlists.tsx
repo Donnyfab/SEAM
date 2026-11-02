@@ -13,6 +13,7 @@ import { askConfirm, askText, GlassMenu, GlassSheet, type GlassItem } from './Gl
 import { Icon } from './Icon'
 import { EditTrack } from './Edit'
 import { useSortable } from './useSortable'
+import { VirtualList } from './VirtualList'
 
 type View = { kind: 'list' } | { kind: 'detail'; id: string }
 const view = signal<View>({ kind: 'list' })
@@ -68,10 +69,10 @@ function TrackPicker({ title, onDone, onClose }: { title: string; onDone: (ids: 
       <div class="nav" style={{ margin: '-12px -24px 8px' }}><button class="side" onClick={onClose}>{translate('Cancel')}</button><h1>{title}</h1><button class="side right" disabled={!pick.length} onClick={() => { onDone(pick); onClose() }}>{translate('Add')} {pick.length || ''}</button></div>
       <input class="search" style={{ margin: '4px 0 8px', width: '100%' }} type="search" placeholder={translate('Search songs, artists, albums')} value={q} onInput={e => setQ((e.target as HTMLInputElement).value)} />
       {!tracks.value.length && <div class="empty">{translate('Import music first: Library › Import & storage.')}</div>}
-      <div class="group" style={{ margin: 0 }}>{list.map(x => (
-        <button class={`row${pick.includes(x.id) ? ' active' : ''}`} onClick={() => setPick(p => (p.includes(x.id) ? p.filter(y => y !== x.id) : [...p, x.id]))}>
+      <div class="group" style={{ margin: 0 }}><VirtualList items={list} keyOf={x => x.id} render={x => (
+        <button class={`row${pick.includes(x.id) ? ' active' : ''}`} style={{ height: '100%' }} onClick={() => setPick(p => (p.includes(x.id) ? p.filter(y => y !== x.id) : [...p, x.id]))}>
           <Art id={x.id} /><div class="grow"><div class="t">{x.title}</div><div class="s">{x.artist} · {fmt(x.duration)}</div></div><span style={{ color: 'var(--accent)' }}>{pick.includes(x.id) ? <Icon name="checkCircle" /> : <Icon name="circle" />}</span>
-        </button>))}</div>
+        </button>)} /></div>
     </div>
   )
 }

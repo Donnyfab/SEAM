@@ -138,3 +138,21 @@ describe('saved language preference', () => {
     expect(settings.crossfade).toBe(5)
   })
 })
+
+describe('plural base keys', () => {
+  it('every camelCase key passed to t()/translate() (including inside ternaries) has plural forms or a literal entry', () => {
+    const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(d => d.isDirectory() ? (d.name === 'i18n' ? [] : walk(`${dir}/${d.name}`)) : /\.tsx?$/.test(d.name) ? [`${dir}/${d.name}`] : [])
+    const missing = new Set<string>()
+    for (const file of walk('src')) {
+      const text = readFileSync(file, 'utf8')
+      for (const call of text.matchAll(/(?:translate|\bt)\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g)) {
+        for (const k of call[1]!.matchAll(/['"]([a-z][A-Za-z]{4,})['"]/g)) {
+          const key = k[1]!
+          if (!/[A-Z]/.test(key) || !/(Songs|Count|Tracks|Stations|Playlists|Scrobbles|Missing|Playlist)$/.test(key)) continue
+          if (!(`${key}_other` in en) && !(key in en)) missing.add(key)
+        }
+      }
+    }
+    expect([...missing]).toEqual([])
+  })
+})

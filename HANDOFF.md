@@ -17,3 +17,6 @@
 - Web Audio scheduling (not `<audio>`) for gapless; ≤3 decoded buffers; IndexedDB blobs; Preact 11 needs the px shim in main.tsx.
 ## Open issues
 - iOS background behavior unknown. Studio export on a phone for long EPs may hit memory limits (single clip in RAM, but output blob grows).
+
+## Update: performance/UX overhaul
+- See docs/PERFORMANCE.md. New: VirtualList, dsp worker (src/workers, src/audio/dspClient.ts), resilientFetch, lazy screens (src/ui/lazy.tsx), undo toasts (state.notifyUndo), art thumbnails (artworkUrl sm/full), useSheet/useFrame/useClock hooks in ui/common.tsx. Run e2e/bench against `SEAM_BASE=/SEAM/ npx vite preview`.

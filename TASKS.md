@@ -30,3 +30,5 @@
 | T061 | useSortable drag-reorder hook | codex | done |
 | T062 | Translations for new playlist strings | codex | done |
 | T063 | Playlists redesign UI + glass menus + queue re-planning | claude | done |
+| T070-T072 | DSP worker, resilient fetch, translations | codex | done |
+| T073 | Performance/UX overhaul | claude | done |

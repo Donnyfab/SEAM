@@ -43,7 +43,7 @@ const tab = n => page.locator('.tabbar button').nth(n)
 
 // ---- navigation ----
 await timed('library', () => tab(1).click(), '.large-title')
-await timed('songs', () => page.locator('.row', { hasText: 'Songs' }).first().click(), '.row .art')
+await timed('songs', () => page.evaluate(() => [...document.querySelectorAll('.row')].find(r => r.textContent.includes('Songs')).click()), '.row .art') // direct click: Playwright would wait for entrance animations to finish
 await page.waitForTimeout(500)
 out.songsDom = await page.evaluate(() => document.querySelectorAll('*').length)
 

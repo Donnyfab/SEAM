@@ -13,3 +13,6 @@
 ## Playlists redesign
 - Browser-verified (mobile viewport): + and ••• glass menus, detail menu, rearrange by real pointer drag (order persists after reload), play next while playing with 3 s crossfade (cancelled old next, new next starts at exact overlap, index flips correctly), rename/delete dialogs with cancel, select mode remove/archive, sort, search, grid/list persistence, add songs, row sheets, Play all / Shuffle.
 - Not tested: iPhone hardware (haptics, long-press drag on touch), import of real .m3u files from other apps (unit-tested only).
+
+## Performance overhaul
+- `npm run e2e` (14 checks), `npm run a11y`, `npm run bench`, `npm run profile`; see docs/PERFORMANCE.md for method and before/after numbers. Unit tests: 491+.
