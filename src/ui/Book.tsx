@@ -7,13 +7,13 @@ const RATES = [0.75, 1, 1.25, 1.5, 1.75, 2, 2.5]
 const hms = (t: number) => { const s = Math.max(0, Math.floor(t)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h}:${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` : fmt(s) }
 
 export function MiniBook({ onOpen }: { onOpen: () => void }) {
-  const s = bookState.value, t = s.trackId ? trackById.value.get(s.trackId) : undefined
+  const s = bookState.value, t = s.trackId ? (trackById.value.get(s.trackId) ?? (s.meta ? { id: s.meta.id, title: s.meta.title, artist: s.meta.artist } : undefined)) : undefined
   if (!t || s.status === 'idle') return null
   const b = getBook()
   return (
     <div class="mini">
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={onOpen}>
-        <Art id={t.id} /><div class="meta"><div class="t" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div><div class="s" style={{ color: 'var(--fg2)', fontSize: 13 }}>{hms(s.duration - s.position)} left · {s.rate}×</div></div>
+        <Art id={t.id} /><div class="meta"><div class="t" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div><div class="s" style={{ color: 'var(--fg2)', fontSize: 13 }}>{s.live ? 'Live stream' : `${hms(s.duration - s.position)} left · ${s.rate}×`}</div></div>
       </div>
       <button class="ctl" aria-label="Back 15 seconds" onClick={() => b.skip(-settings.value.skipBack)}>↺</button>
       <button class="ctl" aria-label={s.status === 'playing' ? 'Pause' : 'Play'} onClick={() => void b.toggle()}>{s.status === 'playing' ? '❚❚' : '▶'}</button>
@@ -23,7 +23,7 @@ export function MiniBook({ onOpen }: { onOpen: () => void }) {
 }
 
 export function BookSheet({ onClose }: { onClose: () => void }) {
-  const s = bookState.value, t = s.trackId ? trackById.value.get(s.trackId) : undefined
+  const s = bookState.value, t = s.trackId ? (trackById.value.get(s.trackId) ?? (s.meta ? { id: s.meta.id, title: s.meta.title, artist: s.meta.artist, kind: 'stream' as const } : undefined)) : undefined
   const b = getBook()
   const [drag, setDrag] = useState<number | null>(null)
   const [sleep, setSleep] = useState<number | null>(null)
@@ -39,11 +39,11 @@ export function BookSheet({ onClose }: { onClose: () => void }) {
       <button aria-label="Close" onClick={onClose} style={{ height: 22 }}><div class="grab" style={{ margin: '0 auto' }} /></button>
       <div style={{ maxWidth: 360, width: '100%', margin: '0 auto' }}><Art id={t.id} big /></div>
       <div class="np-title">{t.title}</div><div class="np-sub">{t.artist}</div>
-      <div style={{ marginTop: 14 }}>
+      {!s.live && <div style={{ marginTop: 14 }}>
         <input type="range" aria-label="Seek" min={0} max={Math.max(s.duration, 1)} step={1} value={shown} style={{ '--p': `${s.duration ? (shown / s.duration) * 100 : 0}%` } as never}
           onInput={e => setDrag(Number((e.target as HTMLInputElement).value))} onChange={e => { b.seek(Number((e.target as HTMLInputElement).value)); setDrag(null) }} />
         <div class="times"><span>{hms(shown)}</span><span>-{hms(Math.max(s.duration - shown, 0) / s.rate)} at {s.rate}×</span></div>
-      </div>
+      </div>}
       <div class="controls" style={{ gap: 26 }}>
         <button aria-label={`Back ${settings.value.skipBack} seconds`} onClick={() => b.skip(-settings.value.skipBack)}>↺<span style={{ fontSize: 12 }}>{settings.value.skipBack}</span></button>
         <button class="play" aria-label={s.status === 'playing' ? 'Pause' : 'Play'} onClick={() => void b.toggle()}>{s.status === 'playing' ? '⏸' : '▶'}</button>

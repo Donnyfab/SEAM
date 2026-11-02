@@ -6,8 +6,9 @@ import { gainForTarget, measureLufs, samplePeak } from './audio/loudness'
 import { makeTransition } from './core/crossfade'
 import { shuffleUpcoming, makeQueue } from './core/queue'
 import { importFiles } from './library/importer'
+import { createAdapter, type RemoteNode, type Source } from './connect/sources'
 import {
-  defaultSettings, loadBookmarks, loadPositions, savePositions, saveBookmarks, saveArt, type Bookmark, deleteTrack, loadArrangements, loadArt, loadFile, loadPlaylists, loadSettings, loadTracks,
+  defaultSettings, loadSources, saveSources, loadBookmarks, loadPositions, savePositions, saveBookmarks, saveArt, type Bookmark, deleteTrack, loadArrangements, loadArt, loadFile, loadPlaylists, loadSettings, loadTracks,
   saveArrangements, savePlaylists, saveSettings, saveTrack, type Playlist, type Settings, type StoredTrack,
 } from './library/store'
 import type { Arrangement } from './core/arrangement'
@@ -27,7 +28,11 @@ export const toast = signal<string | null>(null)
 /** id of the arrangement currently being played from Studio, else null */
 export const playingArrangement = signal<string | null>(null)
 
-export const trackById = computed(() => new Map(tracks.value.map(t => [t.id, t])))
+/** Tracks streamed from remote sources: playable, but not part of the library until downloaded. */
+export const ephemeral = signal<StoredTrack[]>([])
+export const sources = signal<Source[]>([])
+const remoteLoaders = new Map<string, () => Promise<Blob>>()
+export const trackById = computed(() => new Map([...tracks.value, ...ephemeral.value].map(t => [t.id, t])))
 
 export function notify(msg: string) { toast.value = msg; setTimeout(() => { if (toast.value === msg) toast.value = null }, 3500) }
 
@@ -50,7 +55,8 @@ export function decodeTrack(id: string, ctx: BaseAudioContext): Promise<AudioBuf
   const pending = inflight.get(id)
   if (pending) return pending
   const p = (async () => {
-    const blob = await loadFile(id)
+    const remote = remoteLoaders.get(id)
+    const blob = remote ? await remote() : await loadFile(id)
     if (!blob) throw new Error('Audio file missing from storage')
     const buf = await ctx.decodeAudioData(await blob.arrayBuffer())
     decoded.set(id, buf)
@@ -198,6 +204,50 @@ export async function toggleFavorite(id: string) {
   await saveTrack(next)
 }
 
+export function remoteTrack(source: Source, node: RemoteNode): StoredTrack {
+  const m = node.track
+  const id = `remote:${source.id}:${node.id}`
+  const t: StoredTrack = {
+    id, title: m?.title ?? node.title, artist: m?.artist ?? 'Unknown Artist', album: m?.album ?? 'Unknown Album', duration: m?.duration ?? 0,
+    trackNo: m?.trackNo, year: m?.year, genre: m?.genre, addedAt: Date.now(), playCount: 0, favorite: false, fileName: node.fileName ?? node.title,
+  }
+  remoteLoaders.set(id, () => createAdapter(source).blob(node))
+  return t
+}
+
+/** Stream remote tracks through the normal player (downloads each file into memory, then decodes). */
+export async function playRemote(source: Source, nodes: RemoteNode[], start = 0) {
+  const list = nodes.map(n => remoteTrack(source, n))
+  ephemeral.value = list
+  await playTracks(list, start)
+}
+
+export async function downloadRemote(source: Source, nodes: RemoteNode[], onProgress?: (d: number, t: number) => void) {
+  const adapter = createAdapter(source)
+  const files: File[] = []
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i]!
+    const blob = await adapter.blob(n)
+    files.push(new File([blob], n.fileName ?? n.title, { type: blob.type || 'audio/mpeg', lastModified: 0 }))
+    onProgress?.(i + 1, nodes.length)
+  }
+  return importAudio(files)
+}
+
+export async function saveSource(s: Source) {
+  const list = sources.peek()
+  sources.value = list.some(x => x.id === s.id) ? list.map(x => (x.id === s.id ? s : x)) : [...list, s]
+  await saveSources(sources.peek())
+}
+export async function removeSource(id: string) { sources.value = sources.peek().filter(x => x.id !== id); await saveSources(sources.peek()) }
+
+/** Stream an internet-radio URL (or any direct stream) with the media-element player. */
+export async function playStream(name: string, url: string) {
+  engine?.stop()
+  try { await getBook().loadStream(url, { id: `stream:${url}`, title: name, artist: 'Internet radio', album: url }) }
+  catch { notify('Could not play that stream. Browsers need https:// streams.') }
+}
+
 export async function removeTrack(id: string) {
   tracks.value = tracks.value.filter(t => t.id !== id)
   playlists.value = playlists.value.map(p => ({ ...p, trackIds: p.trackIds.filter(x => x !== id) }))
@@ -254,6 +304,7 @@ effect(() => {
 export async function boot() {
   const [t, p, a, s, bm, pos] = await Promise.all([loadTracks(), loadPlaylists(), loadArrangements(), loadSettings(), loadBookmarks(), loadPositions()])
   bookmarks.value = bm; positions.value = pos
+  sources.value = await loadSources()
   tracks.value = t; playlists.value = p; arrangements.value = a; settings.value = s
   try { await navigator.storage?.persist?.() } catch { /* best effort */ }
   ready.value = true

@@ -3,10 +3,9 @@
  * so hours of audio don't need hours of RAM, and so speed changes keep the pitch (preservesPitch).
  */
 export type BookStatus = 'idle' | 'loading' | 'playing' | 'paused'
-export interface BookState { status: BookStatus; trackId: string | null; position: number; duration: number; rate: number }
-type Listener = (s: BookState) => void
-
 export interface BookMeta { id: string; title: string; artist: string; album: string; artwork?: string }
+export interface BookState { status: BookStatus; trackId: string | null; position: number; duration: number; rate: number; meta?: BookMeta; live?: boolean }
+type Listener = (s: BookState) => void
 
 export class BookPlayer {
   private audio = new Audio()
@@ -47,12 +46,23 @@ export class BookPlayer {
     if (this.url) URL.revokeObjectURL(this.url)
     this.meta = meta
     this.url = URL.createObjectURL(blob)
-    this.set({ status: 'loading', trackId: meta.id, position: startAt, rate })
+    this.set({ status: 'loading', trackId: meta.id, position: startAt, rate, meta, live: false })
     this.audio.src = this.url
     this.audio.playbackRate = rate
     await new Promise<void>((res, rej) => { this.audio.onloadedmetadata = () => res(); this.audio.onerror = () => rej(new Error('This file could not be played')) })
     this.audio.currentTime = Math.min(startAt, this.audio.duration || startAt)
     if (navigator.mediaSession) navigator.mediaSession.metadata = new MediaMetadata({ title: meta.title, artist: meta.artist, album: meta.album, artwork: meta.artwork ? [{ src: meta.artwork }] : [] })
+    await this.play()
+  }
+
+  /** Plays a live/online stream URL directly (no CORS needed for plain media playback). */
+  async loadStream(url: string, meta: BookMeta, rate = 1) {
+    if (this.url) { URL.revokeObjectURL(this.url); this.url = null }
+    this.meta = meta
+    this.set({ status: 'loading', trackId: meta.id, position: 0, duration: 0, rate, meta, live: true })
+    this.audio.src = url
+    this.audio.playbackRate = 1
+    if (navigator.mediaSession) navigator.mediaSession.metadata = new MediaMetadata({ title: meta.title, artist: meta.artist, album: meta.album })
     await this.play()
   }
 

@@ -36,6 +36,10 @@ export const loadPositions = async () => (await get<Record<string, number>>('pos
 export const savePositions = (p: Record<string, number>) => set('positions', p, docsDB)
 export async function loadAllDocs() { return { playlists: await loadPlaylists(), arrangements: await loadArrangements(), settings: await loadSettings(), bookmarks: await loadBookmarks(), positions: await loadPositions() } }
 
+import type { Source } from '../connect/sources'
+export const loadSources = async () => (await get<Source[]>('sources', docsDB)) ?? []
+export const saveSources = (s: Source[]) => set('sources', s, docsDB)
+
 export const loadPlaylists = async () => (await get<Playlist[]>('playlists', docsDB)) ?? []
 export const savePlaylists = (p: Playlist[]) => set('playlists', p, docsDB)
 export const loadArrangements = async () => (await get<Arrangement[]>('arrangements', docsDB)) ?? []
