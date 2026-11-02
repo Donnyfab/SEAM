@@ -31,6 +31,9 @@ interface Voice {
   dur: number
   buffer: AudioBuffer
   ended: boolean
+  /** ctx time this voice starts sounding */
+  startAt: number
+  spec: EnvelopeSpec
   /** callbacks run once this voice has finished (used to bound how many tracks are decoded at once) */
   waiters: Array<() => void>
 }
@@ -57,6 +60,8 @@ export class PlaybackEngine {
   private listeners = new Set<Listener>()
   private voices: Voice[] = []
   private gen = 0
+  /** invalidates in-flight 'schedule the next track' work when the queue changes */
+  private chain = 0
   private state: EngineState = { status: 'idle', index: -1, duration: 0 }
 
   constructor(ctx?: AudioContext) {
@@ -175,28 +180,73 @@ export class PlaybackEngine {
       if (dur - offset > 0.01) gain.gain.setValueCurveAtTime(env, when, dur - offset)
     }
     src.start(when, start + offset, dur - offset)
-    const voice: Voice = { index, src, gain, t0, dur, buffer, ended: false, waiters: [] }
+    const voice: Voice = { index, src, gain, t0, dur, buffer, ended: false, startAt: when, spec, waiters: [] }
     this.voices.push(voice)
     src.onended = () => {
       voice.ended = true
       voice.waiters.splice(0).forEach(w => w())
       try { gain.disconnect(); trim.disconnect() } catch { /* already gone */ }
       this.voices = this.voices.filter(v => v !== voice)
-      if (gen === this.gen && nextI === null && this.voices.length === 0) this.set({ status: 'idle' })
+      if (gen === this.gen && this.voices.length === 0 && this.nextIndex(index, true) === null) this.set({ status: 'idle' })
     }
     if (!prev) this.set({ duration: dur })
 
-    if (nextI !== null && nextItem) {
-      const go = () => void this.scheduleNext(nextI, nextItem, t0 + dur - overlapOut, overlapOut, tr.curve, gen, voice)
-      // Only decode the following track once the previous voice is gone: at most ~3 buffers live at a time.
-      if (prev && !prev.ended) prev.waiters.push(go); else go()
-    }
+    this.chainFrom(voice, gen, prev)
   }
 
-  private async scheduleNext(index: number, item: PlayItem, startAt: number, overlap: number, curve: TransitionSettings['curve'], gen: number, from: Voice) {
+  /** Schedules whatever follows `voice` in the current queue. Safe to call again after the queue changes. */
+  private chainFrom(voice: Voice, gen: number, prev?: Voice) {
+    const nextI = this.nextIndex(voice.index, true)
+    const nextItem = nextI === null ? undefined : this.items[nextI]
+    if (nextI === null || !nextItem) return
+    const tr = this.transition(voice.index)
+    const overlapOut = Math.min(tr.duration, voice.dur)
+    const token = this.chain
+    const go = () => { if (token === this.chain && gen === this.gen) void this.scheduleNext(nextI, nextItem, voice.t0 + voice.dur - overlapOut, overlapOut, tr.curve, gen, voice, token) }
+    // Only decode the following track once the previous voice is gone: at most ~3 buffers live at a time.
+    if (prev && !prev.ended) prev.waiters.push(go); else go()
+  }
+
+  /** Insert items into the queue (after the current track, or at the end) and re-plan what plays next. */
+  insertItems(items: PlayItem[], where: 'next' | 'later') {
+    const at = where === 'next' ? Math.max(this.state.index + 1, 0) : this.items.length
+    this.items.splice(at, 0, ...items)
+    void this.rescheduleNext()
+  }
+
+  /** Drop the not-yet-started next voice and plan again from the current one (used when the queue changes). */
+  async rescheduleNext() {
+    if (this.state.status === 'idle') return
+    const now = this.ctx.currentTime
+    this.chain++
+    for (const v of this.voices.filter(x => x.startAt > now + 0.02 && !x.ended)) {
+      v.src.onended = null
+      try { v.src.stop() } catch { /* not started */ }
+      try { v.gain.disconnect() } catch { /* ok */ }
+      this.voices = this.voices.filter(x => x !== v)
+    }
+    const cur = this.voices.find(v => v.index === this.state.index && v.startAt <= now + 0.02 && !v.ended)
+    if (!cur) return
+    const nextI = this.nextIndex(cur.index, true)
+    const tr = this.transition(cur.index)
+    const overlapOut = nextI === null ? 0 : Math.min(tr.duration, cur.dur)
+    if (overlapOut !== cur.spec.overlapOut || tr.curve !== cur.spec.curveOut) {
+      cur.spec = { ...cur.spec, overlapOut, curveOut: tr.curve }
+      const pos = Math.min(Math.max(now - cur.t0, 0), cur.dur)
+      cur.gain.gain.cancelScheduledValues(now)
+      if (needsEnvelope(cur.spec)) {
+        const env = buildEnvelope(cur.spec, pos)
+        cur.gain.gain.setValueAtTime(env[0]!, now)
+        if (cur.dur - pos > 0.01) cur.gain.gain.setValueCurveAtTime(env, now, cur.dur - pos)
+      } else cur.gain.gain.setValueAtTime(1, now)
+    }
+    this.chainFrom(cur, this.gen)
+  }
+
+  private async scheduleNext(index: number, item: PlayItem, startAt: number, overlap: number, curve: TransitionSettings['curve'], gen: number, from: Voice, token = this.chain) {
     try {
       const buffer = await item.load(this.ctx)
-      if (gen !== this.gen) return
+      if (gen !== this.gen || token !== this.chain) return
       // If decoding finished late, start as soon as possible rather than in the past.
       const t0 = Math.max(startAt, this.ctx.currentTime + 0.01)
       const late = t0 > startAt + 0.005

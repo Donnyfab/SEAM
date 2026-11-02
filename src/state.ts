@@ -265,9 +265,28 @@ export async function importAudio(files: File[], onProgress?: (d: number, t: num
 }
 
 export async function createPlaylist(name: string, trackIds: string[] = []) {
-  playlists.value = [...playlists.value, { id: crypto.randomUUID(), name, trackIds, updatedAt: Date.now() }]
+  const now = Date.now()
+  const p: Playlist = { id: crypto.randomUUID(), name, trackIds, updatedAt: now, createdAt: now }
+  playlists.value = [...playlists.value, p]
   await savePlaylists(playlists.value)
+  return p
 }
+
+/** Queue songs after the current one ('next') or at the end ('later'); starts playing if nothing is. */
+export async function enqueue(list: StoredTrack[], where: 'next' | 'later') {
+  if (!list.length) return
+  const e = getEngine()
+  if (e.getState().status === 'idle' || !queueIds.peek().length || bookState.peek().status !== 'idle') { await playTracks(list, 0); return }
+  const at = where === 'next' ? e.getState().index + 1 : queueIds.peek().length
+  const ids = [...queueIds.peek()]
+  ids.splice(at, 0, ...list.map(t => t.id))
+  queueIds.value = ids
+  e.insertItems(list.map(toPlayItem), where)
+  notify(translate(where === 'next' ? 'Playing next: {count} songs' : 'Added {count} songs to the queue', { count: list.length }))
+}
+
+export async function setPlaylistArtwork(id: string, file: Blob) { await setArtwork(`pl:${id}`, file); await updatePlaylist(id, { customArt: true }) }
+export async function removePlaylistArtwork(id: string) { await updatePlaylist(id, { customArt: false }) }
 export async function updatePlaylist(id: string, patch: Partial<Playlist>) {
   playlists.value = playlists.value.map(p => (p.id === id ? { ...p, ...patch, updatedAt: Date.now() } : p))
   await savePlaylists(playlists.value)
