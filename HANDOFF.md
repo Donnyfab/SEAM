@@ -5,7 +5,7 @@
 - NOT verified: anything on a real iPhone (background audio, memory, FLAC/ALAC decode, storage persistence). `/spike.html` is the test page.
 - Codex: bundled CLI (ChatGPT app), logged in. T020 (loudness) and T021 (Subsonic client) merged; effects chain + normalization wired in. Use `scripts/codex-delegate.sh`.
 ## Next
-1. Owner: approve deploy (GitHub Pages public repo vs Cloudflare), then run /spike.html on iPhone (Safari tab + Home Screen) and paste the log.
+1. Deployed: https://donnyfab.github.io/SEAM/ (push to main redeploys). Owner: run /spike.html and the docs/IPHONE_TEST.md checklist on iPhone and paste the log.
 2. Start T022 (WebDAV client, Codex), T031 (Connect tab UI using subsonic.ts/webdav), T032 (speed/position memory/bookmarks).
 3. Decide background-audio fallback from spike results.
 ## Decisions

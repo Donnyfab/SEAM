@@ -16,5 +16,5 @@
 | T031 | Connect tab: Subsonic/WebDAV browse, stream, download offline | claude | todo (after T021/T022) |
 | T032 | Playback speed/position memory, bookmarks, audiobook mode | claude | todo |
 | T033 | Backup/restore, passcode, accessibility pass | claude | todo |
-| T034 | Deploy to GitHub Pages | claude | blocked: needs your approval |
+| T034 | Deploy to GitHub Pages | claude | done — https://donnyfab.github.io/SEAM/ |
 | T035 | Studio: flag clips whose song was deleted in the UI (export now refuses with a message); engine position() with repeat-one overlap | claude | todo |
