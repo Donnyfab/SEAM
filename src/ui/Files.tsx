@@ -2,6 +2,7 @@ import { t as translate } from '../i18n'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { importAudio, tracks, removeTrack, notify } from '../state'
 import { fmtBytes } from './common'
+import { askConfirm } from './Glass'
 
 export function Files() {
   const input = useRef<HTMLInputElement>(null)
@@ -32,7 +33,7 @@ export function Files() {
         {est && <div class="kv"><span>{translate("Storage used")}</span><span>{fmtBytes(est.usage)}{translate(" of ")}{fmtBytes(est.quota)}</span></div>}
         {est && <div class="kv"><span>{translate("Protected from eviction")}</span><span>{est.persisted ? translate("Yes") : translate("No (iOS decides; install to Home Screen)")}</span></div>}
       </div>
-      {tracks.value.length > 0 && <div class="group"><button class="row" style={{ color: 'var(--danger)' }} onClick={async () => { if (confirm(translate("Delete every imported song from this device?"))) { for (const t of [...tracks.value]) await removeTrack(t.id); notify(translate("Library cleared")); void refresh() } }}>{translate("Delete all songs")}</button></div>}
+      {tracks.value.length > 0 && <div class="group"><button class="row" style={{ color: 'var(--danger)' }} onClick={async () => { if (await askConfirm({ title: translate("Delete every imported song from this device?"), ok: translate("Delete all songs"), danger: true })) { for (const t of [...tracks.value]) await removeTrack(t.id); notify(translate("Library cleared")); void refresh() } }}>{translate("Delete all songs")}</button></div>}
     </>
   )
 }

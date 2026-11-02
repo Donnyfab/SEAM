@@ -5,6 +5,7 @@ import { createAdapter, explainNetworkError, jellyfinLogin, testSource, type Rem
 import { parseM3U, parsePLS } from '../connect/playlists'
 import { beginAuth, isCloud, redirectUri } from '../connect/cloud'
 import { fmtBytes, useSheet } from './common'
+import { askConfirm } from './Glass'
 
 const KINDS: { kind: SourceKind; label: string; icon: string; color: string; hint: string }[] = [
   { kind: 'webdav', label: 'WebDAV / NAS / Nextcloud', icon: '☁', color: '#0a84ff', hint: 'Synology, Nextcloud, Apache, rclone serve webdav…' },
@@ -152,7 +153,7 @@ export function Connect() {
       {list.length > 0 && <div class="group">{list.map(s => { const k = kindInfo(s.kind); return (
         <div class="row" style={{ padding: 0 }}>
           <button class="row" style={{ flex: 1, minWidth: 0 }} onClick={() => setActive(s.id)}><span class="icon" style={{ background: k?.color }}>{k?.icon}</span><div class="grow"><div class="t">{s.name}</div><div class="s">{translate(k?.label ?? '')}{s.url ? ` · ${s.url.replace(/^https?:\/\//, '')}` : ''}</div></div><span class="chev">›</span></button>
-          <button aria-label={translate("Remove {name}", { name: s.name })} style={{ padding: '0 16px', color: 'var(--danger)' }} onClick={() => { if (confirm(translate("Remove {name}?", { name: s.name }))) void removeSource(s.id) }}>✕</button></div>) })}</div>}
+          <button aria-label={translate("Remove {name}", { name: s.name })} style={{ padding: '0 16px', color: 'var(--danger)' }} onClick={async () => { if (await askConfirm({ title: translate("Remove {name}?", { name: s.name }), ok: translate("Remove"), danger: true })) void removeSource(s.id) }}>✕</button></div>) })}</div>}
       <div class="hint" style={{ margin: '14px 16px 0', textTransform: 'uppercase' }}>{translate("Add a source")}</div>
       <div class="group">{KINDS.map(k => <button class="row" onClick={() => setAdding(k.kind)}><span class="icon" style={{ background: k.color }}>{k.icon}</span><div class="grow"><div class="t">{translate(k.label)}</div><div class="s">{translate(k.hint)}</div></div><span class="chev">＋</span></button>)}</div>
       <div class="hint">{translate("Browsers can’t speak SMB, SFTP, FTP or DLNA. Most NAS devices (Synology, QNAP, Unraid…) can also expose WebDAV, and Navidrome/Jellyfin work directly. Servers need https:// and CORS.")}</div>

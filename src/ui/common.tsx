@@ -2,6 +2,7 @@ import { t as translate } from '../i18n'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { artworkUrl } from '../state'
 import { formatTime } from '../core/arrangement'
+import { overlayOpen, scrimProps, useOverlay } from './overlay'
 
 export const fmt = formatTime
 
@@ -13,11 +14,13 @@ export function Art({ id, big }: { id?: string; big?: boolean }) {
 
 export interface MenuItem { label: string; run: () => void; danger?: boolean }
 export function ActionMenu({ items, onClose }: { items: MenuItem[]; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useOverlay(ref, onClose, { menu: true })
   return (
-    <div class="menu" onClick={onClose}>
-      <div class="panel" onClick={e => e.stopPropagation()}>
-        {items.map(i => <button class={i.danger ? 'danger' : ''} onClick={() => { onClose(); i.run() }}>{i.label}</button>)}
-        <button onClick={onClose}>{translate("Cancel")}</button>
+    <div class="menu" {...scrimProps(onClose)}>
+      <div class="panel" ref={ref} role="menu" tabIndex={-1}>
+        {items.map(i => <button role="menuitem" class={i.danger ? 'danger' : ''} onClick={() => { onClose(); i.run() }}>{i.label}</button>)}
+        <button role="menuitem" onClick={onClose}>{translate("Cancel")}</button>
       </div>
     </div>
   )
@@ -42,13 +45,7 @@ export async function saveBlob(blob: Blob, name: string) {
 export function useSheet(onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null)
   const drag = useRef<{ y: number; t: number; dy: number } | null>(null)
-  useEffect(() => {
-    const prev = document.activeElement as HTMLElement | null
-    ref.current?.focus({ preventScroll: true })
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => { window.removeEventListener('keydown', onKey); prev?.focus?.({ preventScroll: true }) }
-  }, [])
+  useOverlay(ref, onClose)
   const grabProps = {
     onPointerDown: (e: PointerEvent) => { drag.current = { y: e.clientY, t: performance.now(), dy: 0 }; (e.currentTarget as Element).setPointerCapture(e.pointerId); if (ref.current) ref.current.style.transition = 'none' },
     onPointerMove: (e: PointerEvent) => {
@@ -113,7 +110,7 @@ export function useEdgeSwipeBack(onBack: (() => void) | null) {
   useEffect(() => {
     if (!onBack) return
     let sx = 0, sy = 0, tracking = false
-    const down = (e: PointerEvent) => { tracking = e.clientX < 24 && e.pointerType !== 'mouse'; sx = e.clientX; sy = e.clientY }
+    const down = (e: PointerEvent) => { tracking = e.clientX < 24 && e.pointerType !== 'mouse' && !overlayOpen(); sx = e.clientX; sy = e.clientY }
     const up = (e: PointerEvent) => {
       if (!tracking) return
       tracking = false

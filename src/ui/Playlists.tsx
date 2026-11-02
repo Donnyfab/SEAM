@@ -221,7 +221,7 @@ function PlaylistList() {
         <button aria-label={translate('Play all')} disabled={!allTracks.length} onClick={() => playAll(allTracks)}><Icon name="play" fill /></button>
         <button aria-label={translate('Shuffle')} disabled={!allTracks.length} onClick={() => playShuffled(allTracks)}><Icon name="shuffle" /></button>
       </div>
-      {searching && <div class="pl-search"><Icon name="search" size={18} /><input autofocus type="search" placeholder={translate('Search playlists')} value={q} onInput={e => setQ((e.target as HTMLInputElement).value)} /><button aria-label={translate('Cancel')} onClick={() => { setSearching(false); setQ('') }}>✕</button></div>}
+      {searching && <div class="pl-search"><Icon name="search" size={18} /><input autofocus type="search" enterkeyhint="search" onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setSearching(false); setQ('') } else if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} placeholder={translate('Search playlists')} value={q} onInput={e => setQ((e.target as HTMLInputElement).value)} /><button aria-label={translate('Cancel')} onClick={() => { setSearching(false); setQ('') }}>✕</button></div>}
 
       {!all.length && <div class="empty"><div style={{ opacity: .5, marginBottom: 10 }}><Icon name="music" size={56} /></div>{translate('No playlists yet.')}<div style={{ marginTop: 16 }}><button class="btn" onClick={() => void newPlaylist()}>{translate('New playlist')}</button></div></div>}
       {s.playlistView === 'grid' ? <div class="pl-grid">{active.map(card)}</div> : <div class="group pl-list">{active.map(card)}</div>}
@@ -348,7 +348,7 @@ function PlaylistDetail({ id }: { id: string }) {
         <button aria-label={translate('Play all')} disabled={!all.length} onClick={() => playAll(shown)}><Icon name="play" fill /></button>
         <button aria-label={translate('Shuffle')} disabled={!all.length} onClick={() => playShuffled(shown)}><Icon name="shuffle" /></button>
       </div>
-      {searching && <div class="pl-search"><Icon name="search" size={18} /><input autofocus type="search" placeholder={translate('Search this playlist')} value={q} onInput={e => setQ((e.target as HTMLInputElement).value)} /><button aria-label={translate('Cancel')} onClick={() => { setSearching(false); setQ('') }}>✕</button></div>}
+      {searching && <div class="pl-search"><Icon name="search" size={18} /><input autofocus type="search" enterkeyhint="search" onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setSearching(false); setQ('') } else if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} placeholder={translate('Search this playlist')} value={q} onInput={e => setQ((e.target as HTMLInputElement).value)} /><button aria-label={translate('Cancel')} onClick={() => { setSearching(false); setQ('') }}>✕</button></div>}
       {sort !== 'manual' && <div class="hint" style={{ margin: '0 16px 8px' }}>{translate('Sorted view — choose Sort › Playlist order to rearrange.')}</div>}
       {!all.length && <div class="empty">{translate('This playlist is empty.')}<div style={{ marginTop: 16 }}><button class="btn" onClick={() => setAdding(true)}>{translate('Add songs')}</button></div></div>}
       {grid ? <div class="pl-grid">{shown.map((x, i) => (

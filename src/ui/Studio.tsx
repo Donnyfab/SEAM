@@ -10,6 +10,7 @@ import { renderMix } from '../audio/render'
 import { analyzeTrack, type TrackAnalysis } from '../studio/analysis'
 import { playArrangement, previewTransition } from '../studio/playback'
 import { Art, fmt, saveBlob, useSheet } from './common'
+import { askConfirm, askText } from './Glass'
 import { VirtualList } from './VirtualList'
 
 const currentId = signal<string | null>(null)
@@ -100,8 +101,8 @@ export function Studio() {
   const pps = Math.min(40, Math.max(3, 700 / Math.max(total, 1)))
 
   const commit = (next: Arrangement) => void setArrangements(list.map(x => (x.id === next.id ? next : x)))
-  const create = (name?: string) => {
-    const n = name ?? prompt(translate("Name this arrangement"), translate("Sequence {value}", { value: list.length + 1 }))
+  const create = async (name?: string) => {
+    const n = name ?? await askText({ title: translate("Name this arrangement"), value: translate("Sequence {value}", { value: list.length + 1 }), ok: translate("Create") })
     if (!n) return
     const fresh = makeArrangement(n)
     currentId.value = fresh.id; selected.value = 0
@@ -156,9 +157,9 @@ export function Studio() {
           {list.map(x => <option value={x.id}>{x.name}</option>)}
         </select>
         <button class="btn small secondary" onClick={() => create()}>{translate("New")}</button>
-        <button class="btn small secondary" onClick={() => { const n = prompt(translate("Rename"), a.name); if (n) commit({ ...a, name: n }) }}>{translate("Rename")}</button>
+        <button class="btn small secondary" onClick={async () => { const n = await askText({ title: translate("Rename"), value: a.name }); if (n) commit({ ...a, name: n }) }}>{translate("Rename")}</button>
         <button class="btn small secondary" onClick={() => { const copy = { ...a, id: crypto.randomUUID(), name: translate("{name} copy", { name: a.name }), clips: a.clips.map(c => ({ ...c, id: crypto.randomUUID() })) }; currentId.value = copy.id; void setArrangements([...list, copy]) }}>{translate("Duplicate")}</button>
-        <button class="btn small danger" onClick={() => { if (confirm(translate("Delete “{name}”?", { name: a.name }))) { currentId.value = null; void setArrangements(list.filter(x => x.id !== a.id)) } }}>{translate("Delete")}</button>
+        <button class="btn small danger" onClick={async () => { if (await askConfirm({ title: translate("Delete “{name}”?", { name: a.name }), ok: translate("Delete"), danger: true })) { currentId.value = null; void setArrangements(list.filter(x => x.id !== a.id)) } }}>{translate("Delete")}</button>
       </div>
 
       <div class="actions">

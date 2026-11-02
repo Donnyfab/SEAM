@@ -7,7 +7,7 @@ import { EditTrack } from './Edit'
 import { Files } from './Files'
 import { exportWithTags } from '../library/exportTags'
 import { ActionMenu, Art, fmt, useDebounced, useEdgeSwipeBack } from './common'
-import { askText, GlassSheet, type GlassItem } from './Glass'
+import { askConfirm, askText, GlassSheet, type GlassItem } from './Glass'
 import { Icon } from './Icon'
 import { VirtualList } from './VirtualList'
 
@@ -86,7 +86,7 @@ function Songs({ list, header }: { list: Track[]; header?: boolean }) {
   if (!list.length) return <div class="empty">{translate("Nothing here yet.")}</div>
   return (
     <>
-      <input class="search" type="search" placeholder={translate("Search songs, artists, albums")} value={q} onInput={e => setQ((e.target as HTMLInputElement).value)} />
+      <input class="search" type="search" enterkeyhint="search" onKeyDown={e => { if (e.key === 'Enter' || (e.key === 'Escape' && !q)) (e.target as HTMLInputElement).blur() }} placeholder={translate("Search songs, artists, albums")} value={q} onInput={e => setQ((e.target as HTMLInputElement).value)} />
       <div class="actions">
         <button class="btn small" onClick={() => void playTracks(shown, 0)}>{translate("▶ Play")}</button>
         <button class="btn small secondary" onClick={() => { shuffle.value = true; void playTracks(shown, Math.floor(Math.random() * shown.length)) }}>{translate("⤮ Shuffle")}</button>
@@ -117,8 +117,8 @@ function PlaylistPage({ id }: { id: string }) {
     <>
       <div class="actions">
         <button class="btn small" disabled={!list.length} onClick={() => void playTracks(list, 0)}>{translate("▶ Play")}</button>
-        <button class="btn small secondary" onClick={() => { const n = prompt(translate("Rename playlist"), p.name); if (n) void updatePlaylist(p.id, { name: n }) }}>{translate("Rename")}</button>
-        <button class="btn small danger" onClick={() => { if (confirm(translate("Delete playlist “{name}”?", { name: p.name }))) { void deletePlaylist(p.id); pop() } }}>{translate("Delete")}</button>
+        <button class="btn small secondary" onClick={async () => { const n = await askText({ title: translate("Rename playlist"), value: p.name }); if (n) void updatePlaylist(p.id, { name: n }) }}>{translate("Rename")}</button>
+        <button class="btn small danger" onClick={async () => { if (await askConfirm({ title: translate("Delete playlist “{name}”?", { name: p.name }), ok: translate("Delete"), danger: true })) { void deletePlaylist(p.id); pop() } }}>{translate("Delete")}</button>
       </div>
       {!list.length && <div class="empty">{translate("Add songs from the ⋯ menu in Songs.")}</div>}
       <div class="group">{list.map((t, i) => (
@@ -165,7 +165,7 @@ export function Library() {
       title = translate("Playlists")
       body = (
         <>
-          <div class="actions"><button class="btn small" onClick={() => { const n = prompt(translate("Playlist name")); if (n) void createPlaylist(n) }}>{translate("＋ New playlist")}</button></div>
+          <div class="actions"><button class="btn small" onClick={async () => { const n = await askText({ title: translate("Playlist name"), ok: translate("Create") }); if (n) void createPlaylist(n) }}>{translate("＋ New playlist")}</button></div>
           {!playlists.value.length && <div class="empty">{translate("No playlists yet.")}</div>}
           <div class="group">{playlists.value.map(p => (
             <button class="row" onClick={() => push({ kind: 'playlist', id: p.id })}><span class="icon" style={{ background: '#ff453a' }}>☰</span><div class="grow"><div class="t">{p.name}</div><div class="s">{translate('{count} songs', { count: p.trackIds.length })}</div></div><span class="chev">›</span></button>))}</div>
