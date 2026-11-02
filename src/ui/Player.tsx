@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { engineState, getEngine, queueIds, settings, shuffle, trackById, updateSettings, toggleFavorite } from '../state'
+import { addBookmark, engineState, getEngine, queueIds, settings, shuffle, trackById, updateSettings, toggleFavorite } from '../state'
 import { Art, fmt } from './common'
+import { Visualizer } from './Visualizer'
 
 function usePosition(active: boolean) {
   const [pos, setPos] = useState(0)
@@ -41,13 +42,15 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
   const e = getEngine()
   const pos = usePosition(s.status === 'playing' || s.status === 'paused')
   const [drag, setDrag] = useState<number | null>(null)
+  const [lyrics, setLyrics] = useState(false)
   const shown = drag ?? pos
   const dur = s.duration || t?.duration || 0
   if (!t) return null
   return (
     <div class="sheet" role="dialog" aria-label="Now playing">
       <button class="grab" aria-label="Close" onClick={onClose} style={{ height: 22, background: 'none' }}><div class="grab" style={{ margin: '0 auto' }} /></button>
-      <Art id={t.id} big />
+      {lyrics && t.lyrics ? <div class="group" style={{ margin: 0, padding: 16, whiteSpace: 'pre-wrap', maxHeight: '45vh', overflowY: 'auto' }}>{t.lyrics}</div> : <div style={{ maxWidth: 360, width: '100%', margin: '0 auto' }}><Art id={t.id} big /></div>}
+      <Visualizer />
       <div class="np-title">{t.title}</div>
       <div class="np-sub">{t.artist} — {t.album}</div>
       <div style={{ marginTop: 14 }}>
@@ -62,9 +65,11 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
         <button class="play" aria-label={s.status === 'playing' ? 'Pause' : 'Play'} onClick={() => void e.toggle()}>{s.status === 'playing' ? '⏸' : '▶'}</button>
         <button aria-label="Next" onClick={() => void e.next()}>⏭</button>
       </div>
-      <div class="toggles">
+      <div class="toggles" style={{ flexWrap: 'wrap', rowGap: 10 }}>
         <button class={shuffle.value ? 'on' : ''} onClick={() => { shuffle.value = !shuffle.value }}>Shuffle</button>
         <button class={settings.value.repeat !== 'off' ? 'on' : ''} onClick={() => void updateSettings({ repeat: settings.value.repeat === 'off' ? 'all' : settings.value.repeat === 'all' ? 'one' : 'off' })}>Repeat: {settings.value.repeat}</button>
+        {t.lyrics && <button class={lyrics ? 'on' : ''} onClick={() => setLyrics(!lyrics)}>Lyrics</button>}
+        <button onClick={() => void addBookmark(t.id, getEngine().position())}>🔖 Bookmark</button>
         <button class={t.favorite ? 'on' : ''} onClick={() => void toggleFavorite(t.id)}>{t.favorite ? '♥ Favorite' : '♡ Favorite'}</button>
       </div>
       <div class="group" style={{ margin: '18px 0 0' }}>

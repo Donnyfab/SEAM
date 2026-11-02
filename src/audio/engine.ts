@@ -45,6 +45,8 @@ export class PlaybackEngine {
   readonly ctx: AudioContext
   readonly master: GainNode
   readonly fx: EffectsChain
+  /** tap for visualizers (not connected to the output) */
+  readonly analyser: AnalyserNode
   private fxBypass = false
   private fxNeutral = true
   items: PlayItem[] = []
@@ -63,6 +65,8 @@ export class PlaybackEngine {
     this.master = this.ctx.createGain()
     this.fx = new EffectsChain(this.ctx)
     this.master.connect(this.ctx.destination)
+    this.analyser = this.ctx.createAnalyser(); this.analyser.fftSize = 512; this.analyser.smoothingTimeConstant = 0.78
+    this.master.connect(this.analyser)
     this.fx.output.connect(this.ctx.destination)
     try { (navigator as unknown as { audioSession?: { type: string } }).audioSession && ((navigator as unknown as { audioSession: { type: string } }).audioSession.type = 'playback') } catch { /* optional API */ }
     this.ctx.addEventListener('statechange', () => this.maybeRecover())

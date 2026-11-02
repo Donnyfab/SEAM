@@ -48,6 +48,9 @@ export async function importFiles(files: File[], existing: StoredTrack[], onProg
         genre: common?.genre?.[0], composer: common?.composer?.[0], trackNo: common?.track.no ?? undefined, year: common?.year,
         duration, addedAt: Date.now(), playCount: 0, favorite: false,
         fingerprint, fileName: file.name, sampleRate: md?.format.sampleRate, codec: md?.format.codec,
+        kind: /\.m4b$/i.test(file.name) || duration > 3600 ? 'audiobook' : 'music',
+        lyrics: common?.lyrics?.map(l => (typeof l === 'string' ? l : l.text)).filter(Boolean).join('\n') || undefined,
+        comment: common?.comment?.map(c => (typeof c === 'string' ? c : c.text)).filter(Boolean).join('\n') || undefined,
       }
       await saveFile(id, file)
       const pic = common?.picture?.[0]

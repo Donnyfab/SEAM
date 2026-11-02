@@ -1,12 +1,13 @@
 import { signal, computed, effect } from '@preact/signals'
 import { PlaybackEngine, type EngineState, type PlayItem } from './audio/engine'
+import { BookPlayer, type BookState } from './audio/bookPlayer'
 import { isNeutral } from './audio/presets'
 import { gainForTarget, measureLufs, samplePeak } from './audio/loudness'
 import { makeTransition } from './core/crossfade'
 import { shuffleUpcoming, makeQueue } from './core/queue'
 import { importFiles } from './library/importer'
 import {
-  defaultSettings, deleteTrack, loadArrangements, loadArt, loadFile, loadPlaylists, loadSettings, loadTracks,
+  defaultSettings, loadBookmarks, loadPositions, savePositions, saveBookmarks, saveArt, type Bookmark, deleteTrack, loadArrangements, loadArt, loadFile, loadPlaylists, loadSettings, loadTracks,
   saveArrangements, savePlaylists, saveSettings, saveTrack, type Playlist, type Settings, type StoredTrack,
 } from './library/store'
 import type { Arrangement } from './core/arrangement'
@@ -19,6 +20,9 @@ export const ready = signal(false)
 export const engineState = signal<EngineState>({ status: 'idle', index: -1, duration: 0 })
 export const queueIds = signal<string[]>([])
 export const shuffle = signal(false)
+export const bookmarks = signal<Bookmark[]>([])
+export const positions = signal<Record<string, number>>({})
+export const bookState = signal<BookState>({ status: 'idle', trackId: null, position: 0, duration: 0, rate: 1 })
 export const toast = signal<string | null>(null)
 /** id of the arrangement currently being played from Studio, else null */
 export const playingArrangement = signal<string | null>(null)
@@ -87,6 +91,67 @@ export function getEngine(): PlaybackEngine {
   return engine
 }
 
+let book: BookPlayer | null = null
+export function getBook(): BookPlayer {
+  if (book) return book
+  book = new BookPlayer()
+  book.subscribe(s => { bookState.value = s })
+  book.onProgress = (id, pos) => rememberPosition(id, pos)
+  return book
+}
+
+export function rememberPosition(id: string, pos: number) {
+  const t = trackById.peek().get(id)
+  const next = { ...positions.peek() }
+  if (!t || pos < 5 || pos > t.duration - 15) delete next[id]; else next[id] = pos
+  positions.value = next
+  void savePositions(next)
+}
+
+export const isLong = (t: { duration: number; kind?: string }) => t.kind === 'audiobook' || t.duration >= 600
+
+/** Plays an audiobook / long file through the streaming player, resuming where you left off. */
+export async function playBook(id: string, startAt?: number) {
+  const t = trackById.peek().get(id); if (!t) return
+  engine?.stop()
+  const blob = await loadFile(id)
+  if (!blob) return notify('Audio file missing from storage')
+  const url = await artworkUrl(id)
+  try { await getBook().load(blob, { id, title: t.title, artist: t.artist, album: t.album, artwork: url ?? undefined }, startAt ?? positions.peek()[id] ?? 0, settings.peek().bookRate) }
+  catch (e) { notify(e instanceof Error ? e.message : 'Playback failed') }
+}
+
+export async function addBookmark(trackId: string, time: number, label?: string) {
+  const t = trackById.peek().get(trackId)
+  const b: Bookmark = { id: crypto.randomUUID(), trackId, time, label: label || `${t?.title ?? 'Bookmark'}`, createdAt: Date.now() }
+  bookmarks.value = [...bookmarks.peek(), b]
+  await saveBookmarks(bookmarks.peek())
+  notify('Bookmark added')
+}
+export async function removeBookmark(id: string) { bookmarks.value = bookmarks.peek().filter(b => b.id !== id); await saveBookmarks(bookmarks.peek()) }
+export async function playBookmark(b: Bookmark) {
+  const t = trackById.peek().get(b.trackId); if (!t) return notify('That song was deleted')
+  if (t.kind === 'audiobook') return playBook(t.id, b.time)
+  await playTracks([t], 0, b.time)
+}
+
+export async function updateTrack(id: string, patch: Partial<StoredTrack>) {
+  const t = trackById.peek().get(id); if (!t) return
+  const next = { ...t, ...patch }
+  tracks.value = tracks.peek().map(x => (x.id === id ? next : x))
+  await saveTrack(next)
+}
+export async function setArtwork(id: string, file: Blob) {
+  const bmp = await createImageBitmap(file)
+  const s = Math.min(1, 512 / Math.max(bmp.width, bmp.height))
+  const c = new OffscreenCanvas(Math.round(bmp.width * s), Math.round(bmp.height * s))
+  c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height); bmp.close()
+  await saveArt(id, await c.convertToBlob({ type: 'image/jpeg', quality: 0.85 }))
+  const old = artUrls.get(id); if (old) URL.revokeObjectURL(old)
+  artUrls.delete(id)
+  tracks.value = [...tracks.peek()] // refresh listeners
+}
+
 export function toPlayItem(t: StoredTrack): PlayItem {
   return {
     id: t.id, title: t.title, artist: t.artist, album: t.album,
@@ -105,11 +170,11 @@ export function toPlayItem(t: StoredTrack): PlayItem {
 }
 
 /** Replace the queue and start playback (global crossfade applies; Studio overrides this per transition). */
-export async function playTracks(list: StoredTrack[], start = 0) {
+export async function playTracks(list: StoredTrack[], start = 0, offset?: number) {
   if (!list.length) return
+  book?.stop()
   const e = getEngine()
   let ids = list.map(t => t.id)
-  let idx = start
   if (shuffle.value) {
     const q = shuffleUpcoming(makeQueue(ids, start))
     ids = q.items
@@ -121,7 +186,9 @@ export async function playTracks(list: StoredTrack[], start = 0) {
   e.crossfade = settings.value.crossfade
   e.repeat = settings.value.repeat
   e.setItems(ids.map(id => toPlayItem(trackById.value.get(id)!)))
-  await e.play(idx)
+  const cur = list[start]
+  const resume = offset ?? (cur && isLong(cur) ? positions.peek()[cur.id] : undefined)
+  await e.play(ids.indexOf(cur?.id ?? ''), resume ?? 0)
 }
 
 export async function toggleFavorite(id: string) {
@@ -163,6 +230,14 @@ export async function updateSettings(p: Partial<Settings>) {
   if (engine) { engine.crossfade = settings.value.crossfade; engine.repeat = settings.value.repeat; engine.fx.apply(settings.value.fx); engine.setFxRouting({ neutral: isNeutral(settings.value.fx) }) }
 }
 
+// Remember where you stopped in long (>10 min) music tracks.
+effect(() => {
+  const s = engineState.value
+  const id = queueIds.peek()[s.index]
+  const t = id ? trackById.peek().get(id) : undefined
+  if (engine && t && t.kind !== 'audiobook' && isLong(t) && s.status === 'paused') rememberPosition(t.id, engine.position())
+})
+
 // Count a play when a new track becomes current.
 let lastCounted = ''
 effect(() => {
@@ -177,7 +252,8 @@ effect(() => {
 })
 
 export async function boot() {
-  const [t, p, a, s] = await Promise.all([loadTracks(), loadPlaylists(), loadArrangements(), loadSettings()])
+  const [t, p, a, s, bm, pos] = await Promise.all([loadTracks(), loadPlaylists(), loadArrangements(), loadSettings(), loadBookmarks(), loadPositions()])
+  bookmarks.value = bm; positions.value = pos
   tracks.value = t; playlists.value = p; arrangements.value = a; settings.value = s
   try { await navigator.storage?.persist?.() } catch { /* best effort */ }
   ready.value = true

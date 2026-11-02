@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'preact/hooks'
 import { signal } from '@preact/signals'
-import { createPlaylist, deletePlaylist, engineState, playTracks, playlists, queueIds, removeTrack, toggleFavorite, tracks, trackById, updatePlaylist, notify, shuffle } from '../state'
+import { bookmarks, bookState, createPlaylist, deletePlaylist, engineState, playBook, playBookmark, playTracks, playlists, positions, queueIds, removeBookmark, removeTrack, toggleFavorite, tracks, trackById, updatePlaylist, updateTrack, notify, shuffle } from '../state'
 import { groupAlbums, groupArtists, groupGenres, recents, searchTracks, sortTracks, unplayed, type Track, type TrackGroup } from '../library/model'
+import { EditTrack } from './Edit'
 import { ActionMenu, Art, fmt, type MenuItem } from './common'
 
-type Page = { kind: 'root' } | { kind: 'songs' | 'favorites' | 'recents' | 'unplayed' | 'albums' | 'artists' | 'genres' | 'playlists' } | { kind: 'group'; title: string; ids: string[] } | { kind: 'playlist'; id: string }
+type Page = { kind: 'root' } | { kind: 'songs' | 'favorites' | 'recents' | 'unplayed' | 'albums' | 'artists' | 'genres' | 'playlists' | 'audiobooks' | 'bookmarks' } | { kind: 'group'; title: string; ids: string[] } | { kind: 'playlist'; id: string }
 const stack = signal<Page[]>([{ kind: 'root' }])
 const push = (p: Page) => { stack.value = [...stack.value, p] }
 const pop = () => { if (stack.value.length > 1) stack.value = stack.value.slice(0, -1) }
@@ -14,16 +15,19 @@ const ROOT: { kind: Exclude<Page['kind'], 'root' | 'group' | 'playlist'>; label:
   { kind: 'songs', label: 'Songs', icon: '♪', color: '#ff9f0a' }, { kind: 'unplayed', label: 'Unplayed', icon: '✦', color: '#30d158' },
   { kind: 'albums', label: 'Albums', icon: '▤', color: '#5e5ce6' }, { kind: 'artists', label: 'Artists', icon: '☺', color: '#bf5af2' },
   { kind: 'genres', label: 'Genres', icon: '♬', color: '#64d2ff' }, { kind: 'playlists', label: 'Playlists', icon: '☰', color: '#ff453a' },
+  { kind: 'audiobooks', label: 'Audiobooks', icon: '📖', color: '#8e6f4e' }, { kind: 'bookmarks', label: 'Bookmarks', icon: '🔖', color: '#ffd60a' },
 ]
 
 function SongRow({ t, list, i }: { t: Track; list: Track[]; i: number }) {
   const [menu, setMenu] = useState(false)
+  const [edit, setEdit] = useState(false)
   const cur = queueIds.value[engineState.value.index] === t.id
   const items: MenuItem[] = [
     { label: 'Play next in queue', run: () => notify('Use Play to start a queue') },
     { label: t.favorite ? 'Remove from favorites' : 'Add to favorites', run: () => void toggleFavorite(t.id) },
     ...playlists.value.map(p => ({ label: `Add to “${p.name}”`, run: () => { if (!p.trackIds.includes(t.id)) void updatePlaylist(p.id, { trackIds: [...p.trackIds, t.id] }); notify(`Added to ${p.name}`) } })),
     { label: 'New playlist with this song…', run: () => { const n = prompt('Playlist name'); if (n) void createPlaylist(n, [t.id]) } },
+    { label: 'Edit info…', run: () => setEdit(true) },
     { label: 'Delete from library', danger: true, run: () => { if (confirm(`Delete “${t.title}” from this device?`)) void removeTrack(t.id) } },
   ].filter(x => x.label !== 'Play next in queue')
   return (
@@ -37,8 +41,29 @@ function SongRow({ t, list, i }: { t: Track; list: Track[]; i: number }) {
         <button aria-label="More" style={{ padding: '0 14px', fontSize: 20, color: 'var(--fg2)' }} onClick={() => setMenu(true)}>⋯</button>
       </div>
       {menu && <ActionMenu items={items} onClose={() => setMenu(false)} />}
+      {edit && <EditTrack id={t.id} onClose={() => setEdit(false)} />}
     </>
   )
+}
+
+function Books() {
+  const books = tracks.value.filter(t => t.kind === 'audiobook')
+  const [menu, setMenu] = useState<string | null>(null)
+  if (!books.length) return <div class="empty">No audiobooks yet.<br />Files longer than an hour, and .m4b files, are filed here automatically. You can also choose “Audiobook” under Edit info on any song.</div>
+  return <div class="group">{books.map(t => { const p = positions.value[t.id] ?? 0; const live = bookState.value.trackId === t.id; return (
+    <div class="row" style={{ padding: 0 }}>
+      <button class={`row${live ? ' active' : ''}`} style={{ flex: 1, minWidth: 0 }} onClick={() => void playBook(t.id)}><Art id={t.id} /><div class="grow"><div class="t">{t.title}</div><div class="s">{t.artist} · {p ? `${Math.round((p / t.duration) * 100)}% · ` : ''}{Math.round(t.duration / 60)} min</div></div></button>
+      <button aria-label="More" style={{ padding: '0 14px', fontSize: 20, color: 'var(--fg2)' }} onClick={() => setMenu(t.id)}>⋯</button>
+      {menu === t.id && <ActionMenu items={[{ label: 'Mark as music', run: () => void updateTrack(t.id, { kind: 'music' }) }]} onClose={() => setMenu(null)} />}
+    </div>) })}</div>
+}
+
+function BookmarkList() {
+  const list = [...bookmarks.value].sort((a, b) => b.createdAt - a.createdAt)
+  if (!list.length) return <div class="empty">No bookmarks yet.<br />Add one from the Now Playing screen.</div>
+  return <div class="group">{list.map(b => { const t = trackById.value.get(b.trackId); return (
+    <div class="row" style={{ padding: 0 }}><button class="row" style={{ flex: 1, minWidth: 0 }} onClick={() => void playBookmark(b)}><Art id={b.trackId} /><div class="grow"><div class="t">{b.label}</div><div class="s">{t?.title ?? 'Deleted song'} · {fmt(b.time)}</div></div></button>
+      <button aria-label="Delete bookmark" style={{ padding: '0 16px', color: 'var(--danger)' }} onClick={() => void removeBookmark(b.id)}>✕</button></div>) })}</div>
 }
 
 function Songs({ list, header }: { list: Track[]; header?: boolean }) {
@@ -95,7 +120,8 @@ function PlaylistPage({ id }: { id: string }) {
 
 export function Library() {
   const page = stack.value.at(-1)!
-  const all = tracks.value
+  const everything = tracks.value
+  const all = everything.filter(t => t.kind !== 'audiobook')
   let title = 'Library'
   let body
   switch (page.kind) {
@@ -105,10 +131,12 @@ export function Library() {
           <div class="large-title">Library</div>
           <div class="group">{ROOT.map(r => (
             <button class="row" onClick={() => push({ kind: r.kind })}><span class="icon" style={{ background: r.color }}>{r.icon}</span><div class="grow t">{r.label}</div>
-              <span class="s">{r.kind === 'songs' ? all.length : r.kind === 'playlists' ? playlists.value.length : r.kind === 'favorites' ? all.filter(t => t.favorite).length : ''}</span><span class="chev">›</span></button>))}</div>
+              <span class="s">{r.kind === 'songs' ? all.length : r.kind === 'playlists' ? playlists.value.length : r.kind === 'favorites' ? all.filter(t => t.favorite).length : r.kind === 'audiobooks' ? everything.length - all.length : r.kind === 'bookmarks' ? bookmarks.value.length : ''}</span><span class="chev">›</span></button>))}</div>
           {!all.length && <div class="empty">Your library is empty.<br />Go to Files to import music from your iPhone or iCloud Drive.</div>}
         </>)
       break
+    case 'audiobooks': title = 'Audiobooks'; body = <Books />; break
+    case 'bookmarks': title = 'Bookmarks'; body = <BookmarkList />; break
     case 'songs': title = 'Songs'; body = <Songs list={all} />; break
     case 'favorites': title = 'Favorites'; body = <Songs list={all.filter(t => t.favorite)} />; break
     case 'recents': title = 'Recents'; body = <Songs list={recents(all, 100)} header={false} />; break

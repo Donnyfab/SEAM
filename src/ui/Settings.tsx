@@ -16,6 +16,11 @@ export function Settings() {
         <label class="field"><span>Repeat</span>
           <select value={s.repeat} onChange={e => void updateSettings({ repeat: (e.target as HTMLSelectElement).value as typeof s.repeat })} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '6px 8px' }}><option value="off">Off</option><option value="all">All</option><option value="one">One</option></select></label>
       </div>
+      <div class="group">
+        <label class="field"><span>Visualizer</span><select value={s.visualizer} onChange={e => void updateSettings({ visualizer: (e.target as HTMLSelectElement).value as typeof s.visualizer })} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '6px 8px' }}><option value="bars">Bars</option><option value="wave">Waveform</option><option value="radial">Radial</option><option value="off">Off</option></select></label>
+        <label class="field"><span>Audiobook skip back</span><select value={s.skipBack} onChange={e => void updateSettings({ skipBack: Number((e.target as HTMLSelectElement).value) })} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '6px 8px' }}>{[10, 15, 30, 45].map(v => <option value={v}>{v} s</option>)}</select></label>
+        <label class="field"><span>Audiobook skip forward</span><select value={s.skipForward} onChange={e => void updateSettings({ skipForward: Number((e.target as HTMLSelectElement).value) })} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '6px 8px' }}>{[10, 15, 30, 45, 60].map(v => <option value={v}>{v} s</option>)}</select></label>
+      </div>
       <Sound />
       <div class="hint">Gapless playback is on whenever crossfade is off. Per-transition crossfades for EPs are set in Studio.</div>
       <div class="group">

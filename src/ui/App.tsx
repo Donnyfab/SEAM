@@ -1,10 +1,11 @@
 import { useState } from 'preact/hooks'
-import { ready, toast, engineState, queueIds } from '../state'
+import { ready, toast, engineState, queueIds, bookState } from '../state'
 import { Library } from './Library'
 import { Files } from './Files'
 import { Settings } from './Settings'
 import { Studio } from './Studio'
 import { MiniPlayer, NowPlaying } from './Player'
+import { BookSheet, MiniBook } from './Book'
 
 type Tab = 'library' | 'studio' | 'files' | 'settings'
 const icons: Record<Tab, string> = {
@@ -18,20 +19,21 @@ const labels: Record<Tab, string> = { library: 'Library', studio: 'Studio', file
 export function App() {
   const [tab, setTab] = useState<Tab>('library')
   const [open, setOpen] = useState(false)
-  const hasTrack = engineState.value.index >= 0 && !!queueIds.value[engineState.value.index]
+  const bookActive = bookState.value.status !== 'idle' && !!bookState.value.trackId
+  const hasTrack = bookActive || (engineState.value.index >= 0 && !!queueIds.value[engineState.value.index])
   return (
     <div class="app">
       <main class={`view${hasTrack ? '' : ' no-mini'}`}>
         {!ready.value ? <div class="empty">Loading…</div> : tab === 'library' ? <Library /> : tab === 'studio' ? <Studio /> : tab === 'files' ? <Files /> : <Settings />}
       </main>
-      {hasTrack && <MiniPlayer onOpen={() => setOpen(true)} />}
+      {hasTrack && (bookActive ? <MiniBook onOpen={() => setOpen(true)} /> : <MiniPlayer onOpen={() => setOpen(true)} />)}
       <nav class="tabbar" aria-label="Main">
         {(Object.keys(icons) as Tab[]).map(t => (
           <button class={tab === t ? 'on' : ''} onClick={() => setTab(t)} aria-label={labels[t]} aria-current={tab === t ? 'page' : undefined}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={icons[t]} /></svg>{labels[t]}
           </button>))}
       </nav>
-      {open && <NowPlaying onClose={() => setOpen(false)} />}
+      {open && (bookActive ? <BookSheet onClose={() => setOpen(false)} /> : <NowPlaying onClose={() => setOpen(false)} />)}
       {toast.value && <div class="toast" role="status">{toast.value}</div>}
     </div>
   )

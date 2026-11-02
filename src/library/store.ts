@@ -7,11 +7,11 @@ const filesDB: UseStore = createStore('seam-files', 'kv')
 const artDB: UseStore = createStore('seam-art', 'kv')
 const docsDB: UseStore = createStore('seam-docs', 'kv')
 
-export interface StoredTrack extends Track { fingerprint?: string; fileName?: string; sampleRate?: number; codec?: string; lufs?: number; peak?: number }
+export interface StoredTrack extends Track { fingerprint?: string; fileName?: string; sampleRate?: number; codec?: string; lufs?: number; peak?: number; kind?: 'music' | 'audiobook'; lyrics?: string; comment?: string }
 export interface Playlist { id: string; name: string; trackIds: string[]; updatedAt: number }
 import { defaultFx, type FxSettings } from '../audio/presets'
-export interface Settings { crossfade: number; repeat: 'off' | 'all' | 'one'; fx: FxSettings; normalize: boolean; targetLufs: number }
-export const defaultSettings: Settings = { crossfade: 0, repeat: 'off', fx: defaultFx, normalize: false, targetLufs: -14 }
+export interface Settings { crossfade: number; repeat: 'off' | 'all' | 'one'; fx: FxSettings; normalize: boolean; targetLufs: number; bookRate: number; skipBack: number; skipForward: number; visualizer: 'bars' | 'wave' | 'radial' | 'off' }
+export const defaultSettings: Settings = { crossfade: 0, repeat: 'off', fx: defaultFx, normalize: false, targetLufs: -14, bookRate: 1, skipBack: 15, skipForward: 30, visualizer: 'bars' }
 
 export async function loadTracks(): Promise<StoredTrack[]> {
   const ks = await keys(tracksDB)
@@ -27,6 +27,14 @@ export const loadArt = (id: string) => get<Blob>(id, artDB)
 export async function deleteTrack(id: string) {
   await Promise.all([del(id, tracksDB), del(id, filesDB), del(id, artDB)])
 }
+
+export interface Bookmark { id: string; trackId: string; time: number; label: string; createdAt: number }
+export const loadBookmarks = async () => (await get<Bookmark[]>('bookmarks', docsDB)) ?? []
+export const saveBookmarks = (b: Bookmark[]) => set('bookmarks', b, docsDB)
+/** Last listening position per track (seconds), used for audiobooks and long tracks. */
+export const loadPositions = async () => (await get<Record<string, number>>('positions', docsDB)) ?? {}
+export const savePositions = (p: Record<string, number>) => set('positions', p, docsDB)
+export async function loadAllDocs() { return { playlists: await loadPlaylists(), arrangements: await loadArrangements(), settings: await loadSettings(), bookmarks: await loadBookmarks(), positions: await loadPositions() } }
 
 export const loadPlaylists = async () => (await get<Playlist[]>('playlists', docsDB)) ?? []
 export const savePlaylists = (p: Playlist[]) => set('playlists', p, docsDB)
