@@ -1,3 +1,4 @@
+import { t as translate } from '../i18n'
 import { useEffect, useState } from 'preact/hooks'
 import { artworkUrl } from '../state'
 import { formatTime } from '../core/arrangement'
@@ -16,13 +17,13 @@ export function ActionMenu({ items, onClose }: { items: MenuItem[]; onClose: () 
     <div class="menu" onClick={onClose}>
       <div class="panel" onClick={e => e.stopPropagation()}>
         {items.map(i => <button class={i.danger ? 'danger' : ''} onClick={() => { onClose(); i.run() }}>{i.label}</button>)}
-        <button onClick={onClose}>Cancel</button>
+        <button onClick={onClose}>{translate("Cancel")}</button>
       </div>
     </div>
   )
 }
 
-export function fmtBytes(n: number) { return n > 1e9 ? `${(n / 1e9).toFixed(2)} GB` : `${(n / 1e6).toFixed(1)} MB` }
+export function fmtBytes(n: number) { return n > 1e9 ? translate("{value} GB", { value: (n / 1e9).toFixed(2) }) : translate("{value} MB", { value: (n / 1e6).toFixed(1) }) }
 
 /** Save/share a file: iOS share sheet when available, otherwise a normal download. */
 export async function saveBlob(blob: Blob, name: string) {

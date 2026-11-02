@@ -1,3 +1,4 @@
+import { t as translate } from '../i18n'
 import { useEffect, useRef, useState } from 'preact/hooks'
 import { importAudio, tracks, removeTrack, notify } from '../state'
 import { fmtBytes } from './common'
@@ -18,20 +19,20 @@ export function Files() {
   }
   return (
     <>
-      <div class="large-title">Files</div>
+      <div class="large-title">{translate("Files")}</div>
       <div class="group">
-        <button class="row" onClick={() => input.current?.click()}><span class="icon" style={{ background: '#0a84ff' }}>＋</span><div class="grow"><div class="t">Import music…</div><div class="s">From iPhone, iCloud Drive or any Files location</div></div></button>
+        <button class="row" onClick={() => input.current?.click()}><span class="icon" style={{ background: '#0a84ff' }}>＋</span><div class="grow"><div class="t">{translate("Import music…")}</div><div class="s">{translate("From iPhone, iCloud Drive or any Files location")}</div></div></button>
         <input ref={input} type="file" multiple accept="audio/*,.flac,.m4a,.mp3,.wav,.aif,.aiff,.alac,.aac,.caf,.ogg,.opus" hidden
           onChange={e => { const el = e.target as HTMLInputElement; void onFiles([...(el.files ?? [])]); el.value = '' }} />
       </div>
-      {prog && <div class="group" style={{ padding: 14 }}><div>Importing {prog[0]} / {prog[1]}…</div><div class="bar"><i style={{ width: `${(prog[0] / prog[1]) * 100}%` }} /></div></div>}
-      <div class="hint">Files are copied into SEAM’s private storage on this device and play offline. iOS Safari can’t link to a folder, so each import makes a copy. Nothing is uploaded anywhere.</div>
+      {prog && <div class="group" style={{ padding: 14 }}><div>{translate("Importing ")}{prog[0]} / {prog[1]}…</div><div class="bar"><i style={{ width: `${(prog[0] / prog[1]) * 100}%` }} /></div></div>}
+      <div class="hint">{translate("Files are copied into SEAM’s private storage on this device and play offline. iOS Safari can’t link to a folder, so each import makes a copy. Nothing is uploaded anywhere.")}</div>
       <div class="group">
-        <div class="kv"><span>Songs</span><span>{tracks.value.length}</span></div>
-        {est && <div class="kv"><span>Storage used</span><span>{fmtBytes(est.usage)} of {fmtBytes(est.quota)}</span></div>}
-        {est && <div class="kv"><span>Protected from eviction</span><span>{est.persisted ? 'Yes' : 'No (iOS decides; install to Home Screen)'}</span></div>}
+        <div class="kv"><span>{translate("Songs")}</span><span>{tracks.value.length}</span></div>
+        {est && <div class="kv"><span>{translate("Storage used")}</span><span>{fmtBytes(est.usage)}{translate(" of ")}{fmtBytes(est.quota)}</span></div>}
+        {est && <div class="kv"><span>{translate("Protected from eviction")}</span><span>{est.persisted ? translate("Yes") : translate("No (iOS decides; install to Home Screen)")}</span></div>}
       </div>
-      {tracks.value.length > 0 && <div class="group"><button class="row" style={{ color: 'var(--danger)' }} onClick={async () => { if (confirm('Delete every imported song from this device?')) { for (const t of [...tracks.value]) await removeTrack(t.id); notify('Library cleared'); void refresh() } }}>Delete all songs</button></div>}
+      {tracks.value.length > 0 && <div class="group"><button class="row" style={{ color: 'var(--danger)' }} onClick={async () => { if (confirm(translate("Delete every imported song from this device?"))) { for (const t of [...tracks.value]) await removeTrack(t.id); notify(translate("Library cleared")); void refresh() } }}>{translate("Delete all songs")}</button></div>}
     </>
   )
 }
