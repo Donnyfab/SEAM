@@ -10,6 +10,9 @@ export function Settings() {
       <div class="group">
         <label class="field"><span>Default crossfade</span><span class="num">{s.crossfade === 0 ? 'Off' : `${s.crossfade}s`}</span></label>
         <div style={{ padding: '0 14px 10px' }}><input type="range" min={0} max={15} step={1} value={s.crossfade} aria-label="Default crossfade" style={{ '--p': `${(s.crossfade / 15) * 100}%` } as never} onChange={e => void updateSettings({ crossfade: Number((e.target as HTMLInputElement).value) })} /></div>
+        <label class="field"><span>Normalize volume</span><input type="checkbox" checked={s.normalize} onChange={e => void updateSettings({ normalize: (e.target as HTMLInputElement).checked })} /></label>
+        {s.normalize && <label class="field"><span>Target loudness</span>
+          <select value={s.targetLufs} onChange={e => void updateSettings({ targetLufs: Number((e.target as HTMLSelectElement).value) })} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '6px 8px' }}><option value={-14}>-14 LUFS (streaming)</option><option value={-16}>-16 LUFS</option><option value={-18}>-18 LUFS (quiet)</option><option value={-23}>-23 LUFS (broadcast)</option></select></label>}
         <label class="field"><span>Repeat</span>
           <select value={s.repeat} onChange={e => void updateSettings({ repeat: (e.target as HTMLSelectElement).value as typeof s.repeat })} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '6px 8px' }}><option value="off">Off</option><option value="all">All</option><option value="one">One</option></select></label>
       </div>

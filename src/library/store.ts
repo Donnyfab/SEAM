@@ -7,11 +7,11 @@ const filesDB: UseStore = createStore('seam-files', 'kv')
 const artDB: UseStore = createStore('seam-art', 'kv')
 const docsDB: UseStore = createStore('seam-docs', 'kv')
 
-export interface StoredTrack extends Track { fingerprint?: string; fileName?: string; sampleRate?: number; codec?: string }
+export interface StoredTrack extends Track { fingerprint?: string; fileName?: string; sampleRate?: number; codec?: string; lufs?: number; peak?: number }
 export interface Playlist { id: string; name: string; trackIds: string[]; updatedAt: number }
 import { defaultFx, type FxSettings } from '../audio/presets'
-export interface Settings { crossfade: number; repeat: 'off' | 'all' | 'one'; fx: FxSettings }
-export const defaultSettings: Settings = { crossfade: 0, repeat: 'off', fx: defaultFx }
+export interface Settings { crossfade: number; repeat: 'off' | 'all' | 'one'; fx: FxSettings; normalize: boolean; targetLufs: number }
+export const defaultSettings: Settings = { crossfade: 0, repeat: 'off', fx: defaultFx, normalize: false, targetLufs: -14 }
 
 export async function loadTracks(): Promise<StoredTrack[]> {
   const ks = await keys(tracksDB)

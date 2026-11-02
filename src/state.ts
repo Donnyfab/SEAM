@@ -1,5 +1,6 @@
 import { signal, computed, effect } from '@preact/signals'
 import { PlaybackEngine, type EngineState, type PlayItem } from './audio/engine'
+import { gainForTarget, measureLufs, samplePeak } from './audio/loudness'
 import { makeTransition } from './core/crossfade'
 import { shuffleUpcoming, makeQueue } from './core/queue'
 import { importFiles } from './library/importer'
@@ -48,11 +49,22 @@ export function decodeTrack(id: string, ctx: BaseAudioContext): Promise<AudioBuf
     if (!blob) throw new Error('Audio file missing from storage')
     const buf = await ctx.decodeAudioData(await blob.arrayBuffer())
     decoded.set(id, buf)
+    void measureOnce(id, buf)
     while (decoded.size > 3) decoded.delete(decoded.keys().next().value as string)
     return buf
   })().finally(() => inflight.delete(id))
   inflight.set(id, p)
   return p
+}
+
+/** Loudness is measured once per track (after the first decode) and stored with the track. */
+async function measureOnce(id: string, buf: AudioBuffer) {
+  const t = trackById.peek().get(id)
+  if (!t || t.lufs !== undefined) return
+  const ch = Array.from({ length: Math.min(buf.numberOfChannels, 2) }, (_, i) => buf.getChannelData(i))
+  const next = { ...t, lufs: measureLufs(ch, buf.sampleRate), peak: samplePeak(ch) }
+  tracks.value = tracks.peek().map(x => (x.id === id ? next : x))
+  await saveTrack(next)
 }
 
 let engine: PlaybackEngine | null = null
@@ -68,6 +80,16 @@ export function toPlayItem(t: StoredTrack): PlayItem {
   return {
     id: t.id, title: t.title, artist: t.artist, album: t.album,
     load: ctx => decodeTrack(t.id, ctx),
+    gainFor: buf => {
+      if (!settings.peek().normalize) return 1
+      const cur = trackById.peek().get(t.id)
+      let lufs = cur?.lufs, peak = cur?.peak
+      if (lufs === undefined || peak === undefined) { // first play: measure inline so the very first listen is normalized too
+        const ch = Array.from({ length: Math.min(buf.numberOfChannels, 2) }, (_, i) => buf.getChannelData(i))
+        lufs = measureLufs(ch, buf.sampleRate); peak = samplePeak(ch)
+      }
+      return Number.isFinite(lufs) ? gainForTarget(lufs, settings.peek().targetLufs, peak) : 1
+    },
   }
 }
 

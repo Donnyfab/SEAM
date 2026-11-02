@@ -15,6 +15,8 @@ export interface PlayItem {
   trimEnd?: number
   fadeIn?: number
   fadeOut?: number
+  /** linear gain applied after decoding (e.g. loudness normalization) */
+  gainFor?: (buffer: AudioBuffer) => number
 }
 
 export type EngineStatus = 'idle' | 'loading' | 'playing' | 'paused'
@@ -145,7 +147,9 @@ export class PlaybackEngine {
     const src = this.ctx.createBufferSource()
     const gain = this.ctx.createGain()
     src.buffer = buffer
-    src.connect(gain).connect(this.master)
+    const trim = this.ctx.createGain()
+    trim.gain.value = item.gainFor?.(buffer) ?? 1
+    src.connect(gain).connect(trim).connect(this.master)
     const when = Math.max(t0 + offset, this.ctx.currentTime)
     if (needsEnvelope(spec)) {
       const env = buildEnvelope(spec, offset)
@@ -158,7 +162,7 @@ export class PlaybackEngine {
     src.onended = () => {
       voice.ended = true
       voice.waiters.splice(0).forEach(w => w())
-      try { gain.disconnect() } catch { /* already gone */ }
+      try { gain.disconnect(); trim.disconnect() } catch { /* already gone */ }
       this.voices = this.voices.filter(v => v !== voice)
       if (gen === this.gen && nextI === null && this.voices.length === 0) this.set({ status: 'idle' })
     }

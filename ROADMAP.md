@@ -5,7 +5,7 @@
 - ✅ MP3, AAC, M4A, ALAC, WAV, AIFF, FLAC (whatever Safari's CoreAudio decodes) · ⚠ OGG/Opus/WMA/APE need WASM decoders (⬜)
 - ✅ Gapless (sample-accurate, verified 0 ms gap in WebKit-class engine) · ✅ crossfade 0–15 s, equal-power/linear
 - ✅ Repeat/shuffle, queue list, seek, prev/next · ✅ Lock-screen/headphone controls via Media Session (iOS behavior to verify)
-- ⬜ Playback speed + position memory · ⬜ EQ/presets, reverb, delay, distortion, compressor (all native Web Audio nodes) · ⬜ loudness normalization (T020 in progress) · ⬜ visualizer (AnalyserNode) · ⬜ spatial (basic HRTF panner only)
+- ✅ 10-band EQ + 8 presets + preamp/auto-headroom, reverb, delay, distortion, compressor (Settings → Sound) · ✅ loudness normalization (EBU R128 LUFS, target selectable) · ⬜ playback speed + position memory · ⬜ visualizer (AnalyserNode) · ⬜ spatial (basic HRTF panner only)
 - ⚠ Background playback: unverified on iOS — run /spike.html (see ARCHITECTURE risks)
 - ⚠ AirPlay: system output routing works via Control Center; no in-app picker for Web Audio
 ## Library
@@ -18,7 +18,7 @@
 - ✅ Export continuous WAV mix (16-bit, frame-accurate, memory-bounded) · ✅ tracklist (.txt) + arrangement JSON
 - ⬜ 24-bit/32f export option in UI, ⬜ M4A export (MediaRecorder/WebCodecs), ⬜ A/B level-matched compare, ⬜ Ableton: import WAV/AIFF/FLAC/MP3 bounces (works now); `.als` project import ❌
 ## Cloud & network
-- ⬜🔑 Dropbox / Google Drive / OneDrive (OAuth PKCE; you register a free app) · ⬜ WebDAV, ⬜ Subsonic/Navidrome (T021 client in progress), ⬜ Jellyfin (server must allow CORS) · ⬜ internet radio/stream URLs (CORS limits metadata)
+- ⬜🔑 Dropbox / Google Drive / OneDrive (OAuth PKCE; you register a free app) · ⬜ WebDAV, 🟡 Subsonic/Navidrome (client + tests done, UI pending), ⬜ Jellyfin (server must allow CORS) · ⬜ internet radio/stream URLs (CORS limits metadata)
 - ❌ SMB, SFTP, FTP, DLNA/UPnP (no raw sockets in browsers) → use WebDAV/Subsonic gateways on your NAS · ❌ Wi-Fi Drive server on the phone → use Files import
 ## Platform
 - ✅ Installable PWA (manifest + service worker, offline shell) · ⬜ deploy (needs your approval)
