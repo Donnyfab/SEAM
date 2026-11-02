@@ -1,14 +1,14 @@
-# HANDOFF (keep under 60 lines)
+# HANDOFF (keep short)
 ## State (2026-11-01)
-- Repo initialised. SEAMCore package builds; 16 Swift Testing tests pass via `scripts/test-clt.sh`.
-- Xcode is NOT installed (Command Line Tools only) -> no iOS app target, simulator or device install yet. 16 GB disk free; Xcode needs ~40 GB.
-- Codex: bundled CLI at /Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex (0.165.0-alpha), logged in with ChatGPT. Use `scripts/codex-delegate.sh`.
+- Pivoted from native iOS to an iOS-installable PWA (no Xcode / Apple account). Stack and reasoning: ARCHITECTURE.md. Swift prototype kept in `legacy/`.
+- Working: import (tags+artwork), library views, playlists, gapless/crossfade playback, Now Playing sheet, Media Session, Studio (arrangements, waveform trims, per-transition crossfade, preview, WAV mix export, tracklist/JSON), PWA install + offline shell. 64 unit tests; WAV export and gapless timing verified in browser.
+- NOT verified: anything on a real iPhone (background audio, memory, FLAC/ALAC decode, storage persistence). `/spike.html` is the test page.
+- Codex: bundled CLI (ChatGPT app), logged in. Running: T020 (loudness), T021 (Subsonic). Use `scripts/codex-delegate.sh`.
 ## Next
-1. Owner frees disk + installs Xcode (App Store) -> create app target (T004/T005 unblock).
-2. Run T002 on Codex as a pipeline smoke test; review its branch.
-3. T003, T006 (Codex); T007 (Claude).
+1. Owner: approve deploy (GitHub Pages public repo vs Cloudflare), then run /spike.html on iPhone (Safari tab + Home Screen) and paste the log.
+2. Merge T020/T021; start T022, T030 (EQ/effects), T031 (Connect tab).
+3. Decide background-audio fallback from spike results.
 ## Decisions
-- Logic-first: SEAMCore is UI/audio-framework independent so it stays testable without Xcode.
-- Swift Testing, not XCTest.
+- Web Audio scheduling (not `<audio>`) for gapless; ≤3 decoded buffers; IndexedDB blobs; Preact 11 needs the px shim in main.tsx.
 ## Open issues
-- Real Evermusic-parity items needing credentials/entitlements are tracked in ROADMAP.md.
+- iOS background behavior unknown. Studio export on a phone for long EPs may hit memory limits (single clip in RAM, but output blob grows).

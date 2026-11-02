@@ -1,6 +1,6 @@
 # TESTING
-- Unit: `scripts/test-clt.sh` (CLT-only) or `swift test` (Xcode). Currently 19 tests: crossfade curves, arrangement timeline/trim/reorder/export, play queue.
-- Not yet verifiable (needs Xcode): iOS build, simulator UI, AVAudioEngine gapless/crossfade timing, CarPlay, widgets, device install.
-- Audio-timing tests plan: render known tones through the engine offline (manual rendering mode) and assert sample-accurate overlap.
-## Known issues
-- `swift test` on bare CLT needs the flags in scripts/test-clt.sh (Testing.framework paths are not default).
+- `npm test` (Vitest): core (crossfade/arrangement/queue), envelope, library model, WAV/peaks, loudness, Subsonic as they land.
+- `npm run typecheck`, `npm run build`.
+- Browser-verified (Chromium engine via preview): import + tag parse + IndexedDB; gapless chain (0 ms gap between scheduled voices); crossfade gain power constant (RMS 0.2519 vs 0.2525); renderMix output length exact (3,072,000 frames) and valid WAV header; service worker + manifest active; mobile layout screenshots.
+- NOT yet verified: real iOS Safari / installed PWA (use /spike.html), long-track memory, FLAC/ALAC decode, lock-screen controls.
+- Playwright WebKit is a desktop approximation of Safari and is not a substitute for the iPhone test.
