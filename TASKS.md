@@ -26,3 +26,7 @@
 | T033 | Backup/restore, passcode, Last.fm, accessibility | claude | done |
 | T050 | Localization (en/es/fr/de) | codex | done |
 | T051 | Studio: flag deleted clips; 24-bit export option; M4A tag writing | claude/codex | done |
+| T060 | Playlist IO: import/export/sort/search/duration/reorder helpers | codex | done |
+| T061 | useSortable drag-reorder hook | codex | done |
+| T062 | Translations for new playlist strings | codex | done |
+| T063 | Playlists redesign UI + glass menus + queue re-planning | claude | done |

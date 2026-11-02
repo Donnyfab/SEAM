@@ -8,6 +8,10 @@
 - ✅ 10-band EQ + 8 presets + preamp/auto-headroom, reverb, delay, distortion, compressor (Settings → Sound) · ✅ loudness normalization (EBU R128 LUFS, target selectable) · ✅ visualizer (bars/waveform/radial) · ✅ position memory (audiobooks + tracks >10 min) · 🟡 speed 0.5–3× with natural pitch for audiobooks/long files (media element); ❌ pitch-preserving speed for gapless music (Web Audio has no time-stretch) · ⬜ spatial (basic HRTF panner only)
 - ⚠ Background playback: unverified on iOS — run /spike.html (see ARCHITECTURE risks)
 - ⚠ AirPlay: system output routing works via Control Center; no in-app picker for Web Audio
+## Playlists (redesigned)
+- ✅ Bottom nav: Playlists | Library | Studio | Connect | Settings (Studio stays separate; Files import moved to Library › Import & storage)
+- ✅ Playlists screen: grid/list, cover art (custom image, song collage, or first song), durations, count, search, Play all, Shuffle, + menu (New / Import), ••• menu (Select, New, Import, Search, Sort, Grid/List, Help), multi-select (play, play next, archive, delete), archive/restore
+- ✅ Playlist screen: hero art, Search / Play next / Play all / Shuffle, song list with per-song menus, Select, Play next / Play later (re-plans the audio queue, crossfade respected), Add songs, drag-and-drop Rearrange, Rename, Edit image, Export (.m3u8 or SEAM .json), Import (.m3u/.m3u8/.pls/.json, matched to library), Archive, Sort, Grid/List, Delete with confirmation; all persisted
 ## Library
 - ✅ Import from Files/iCloud Drive/USB via the iOS file picker (copies into app storage) · ❌ linking a folder in place
 - ✅ Songs, albums, artists, genres, favorites, recents, unplayed, search, sort · ✅ playlists (create, rename, reorder, delete)

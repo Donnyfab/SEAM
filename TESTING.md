@@ -9,3 +9,7 @@
 - Browser-verified: audiobook import (>1 h classified as audiobook), streaming, seek, 1.5x, bookmark, saved + resumed position; backup, delete, restore round trip (blob sizes equal, bookmarks kept, bad file rejected); WebDAV list/stream/download vs a local mock server; passcode verify + lockout schedule.
 - Mock-only: Dropbox, Google Drive, OneDrive, Jellyfin, Subsonic, Last.fm.
 - Not yet on iPhone: Connect, audiobooks, backup, passcode.
+
+## Playlists redesign
+- Browser-verified (mobile viewport): + and ••• glass menus, detail menu, rearrange by real pointer drag (order persists after reload), play next while playing with 3 s crossfade (cancelled old next, new next starts at exact overlap, index flips correctly), rename/delete dialogs with cancel, select mode remove/archive, sort, search, grid/list persistence, add songs, row sheets, Play all / Shuffle.
+- Not tested: iPhone hardware (haptics, long-press drag on touch), import of real .m3u files from other apps (unit-tested only).
