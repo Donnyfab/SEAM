@@ -1,7 +1,16 @@
-import { createStore, del, get, getMany, keys, set, setMany, type UseStore } from 'idb-keyval'
+import { createStore, del, get, getMany, keys, set as rawSet, setMany, type UseStore } from 'idb-keyval'
 import type { Track } from './model'
 import type { Arrangement } from '../core/arrangement'
 
+/** Write with one retry; a persistent failure raises 'seam:save-error' so the UI can tell the user instead of silently losing data. */
+async function set(key: IDBValidKey, value: unknown, store?: UseStore): Promise<void> {
+  try { await rawSet(key, value, store) } catch (first) {
+    try { await new Promise(r => setTimeout(r, 250)); await rawSet(key, value, store) } catch (e) {
+      window.dispatchEvent(new CustomEvent('seam:save-error', { detail: e }))
+      throw e
+    }
+  }
+}
 const tracksDB: UseStore = createStore('seam-tracks', 'kv')
 const filesDB: UseStore = createStore('seam-files', 'kv')
 const artDB: UseStore = createStore('seam-art', 'kv')
@@ -22,10 +31,23 @@ export const saveTracks = (ts: StoredTrack[]) => setMany(ts.map(t => [t.id, t]),
 export const saveFile = (id: string, blob: Blob) => set(id, blob, filesDB)
 export const loadFile = (id: string) => get<Blob>(id, filesDB)
 export const saveArt = (id: string, blob: Blob) => set(id, blob, artDB)
+export const loadArtSmall = (id: string) => get<Blob>(`${id}@sm`, artDB)
+export const saveArtSmall = (id: string, blob: Blob) => set(`${id}@sm`, blob, artDB)
+export const deleteArtSmall = (id: string) => del(`${id}@sm`, artDB)
 export const loadArt = (id: string) => get<Blob>(id, artDB)
 
+export const deleteTrackRecord = (id: string) => del(id, tracksDB)
+export async function deleteTrackFiles(id: string) { await Promise.all([del(id, filesDB), del(id, artDB), del(`${id}@sm`, artDB)]) }
+/** Audio/artwork rows whose track record no longer exists (e.g. the app closed during an undo window). */
+export async function findOrphans(): Promise<string[]> {
+  const known = new Set((await keys(tracksDB)).map(String))
+  const ids = new Set<string>()
+  for (const k of await keys(filesDB)) ids.add(String(k))
+  for (const k of await keys(artDB)) { const id = String(k).replace(/@sm$/, ''); if (!id.startsWith('pl:')) ids.add(id) }
+  return [...ids].filter(id => !known.has(id))
+}
 export async function deleteTrack(id: string) {
-  await Promise.all([del(id, tracksDB), del(id, filesDB), del(id, artDB)])
+  await Promise.all([del(id, tracksDB), deleteTrackFiles(id)])
 }
 
 export interface Bookmark { id: string; trackId: string; time: number; label: string; createdAt: number }

@@ -19,7 +19,7 @@ export function Files() {
   }
   return (
     <>
-      <div class="large-title">{translate("Files")}</div>
+      <h1 class="large-title">{translate("Files")}</h1>
       <div class="group">
         <button class="row" onClick={() => input.current?.click()}><span class="icon" style={{ background: '#0a84ff' }}>＋</span><div class="grow"><div class="t">{translate("Import music…")}</div><div class="s">{translate("From iPhone, iCloud Drive or any Files location")}</div></div></button>
         <input ref={input} type="file" multiple accept="audio/*,.flac,.m4a,.mp3,.wav,.aif,.aiff,.alac,.aac,.caf,.ogg,.opus" hidden

@@ -1,12 +1,15 @@
 import { t as translate } from '../i18n'
 import { useMemo, useState } from 'preact/hooks'
 import { signal } from '@preact/signals'
-import { bookmarks, bookState, createPlaylist, deletePlaylist, engineState, playBook, playBookmark, playTracks, playlists, positions, queueIds, removeBookmark, removeTrack, toggleFavorite, tracks, trackById, updatePlaylist, updateTrack, notify, shuffle } from '../state'
+import { bookmarks, bookState, createPlaylist, deletePlaylist, deleteTrackWithUndo, engineState, enqueue, playBook, playBookmark, playTracks, playlists, positions, queueIds, removeBookmark, toggleFavorite, tracks, trackById, updatePlaylist, updateTrack, notify, shuffle } from '../state'
 import { groupAlbums, groupArtists, groupGenres, recents, searchTracks, sortTracks, unplayed, type Track, type TrackGroup } from '../library/model'
 import { EditTrack } from './Edit'
 import { Files } from './Files'
 import { exportWithTags } from '../library/exportTags'
-import { ActionMenu, Art, fmt, type MenuItem } from './common'
+import { ActionMenu, Art, fmt, useDebounced } from './common'
+import { askText, GlassSheet, type GlassItem } from './Glass'
+import { Icon } from './Icon'
+import { VirtualList } from './VirtualList'
 
 type Page = { kind: 'root' } | { kind: 'songs' | 'favorites' | 'recents' | 'unplayed' | 'albums' | 'artists' | 'genres' | 'playlists' | 'audiobooks' | 'bookmarks' | 'files' } | { kind: 'group'; title: string; ids: string[] } | { kind: 'playlist'; id: string }
 const stack = signal<Page[]>([{ kind: 'root' }])
@@ -26,26 +29,30 @@ function SongRow({ t, list, i }: { t: Track; list: Track[]; i: number }) {
   const [menu, setMenu] = useState(false)
   const [edit, setEdit] = useState(false)
   const cur = queueIds.value[engineState.value.index] === t.id
-  const items: MenuItem[] = [
-    { label: translate("Play next in queue"), run: () => notify(translate("Use Play to start a queue")) },
-    { label: t.favorite ? translate("Remove from favorites") : translate("Add to favorites"), run: () => void toggleFavorite(t.id) },
-    ...playlists.value.map(p => ({ label: translate("Add to “{name}”", { name: p.name }), run: () => { if (!p.trackIds.includes(t.id)) void updatePlaylist(p.id, { trackIds: [...p.trackIds, t.id] }); notify(translate("Added to {name}", { name: p.name })) } })),
-    { label: translate("New playlist with this song…"), run: () => { const n = prompt(translate("Playlist name")); if (n) void createPlaylist(n, [t.id]) } },
-    { label: translate("Edit info…"), run: () => setEdit(true) },
-    { label: translate("Export file with edited tags (MP3/FLAC)"), run: () => void exportWithTags(t.id) },
-    { label: translate("Delete from library"), danger: true, run: () => { if (confirm(translate("Delete “{title}” from this device?", { title: t.title }))) void removeTrack(t.id) } },
-  ].filter(x => x.label !== translate("Play next in queue"))
+  const items: GlassItem[] = [
+    { label: translate('Play'), icon: 'play', run: () => void playTracks(list, i) },
+    { label: translate('Play next'), icon: 'playNext', run: () => void enqueue([t as never], 'next') },
+    { label: translate('Play later'), icon: 'later', run: () => void enqueue([t as never], 'later') },
+    { label: translate('Add to playlist'), icon: 'addSong', sub: [
+      { label: translate('New playlist'), icon: 'plus', run: async () => { const n = await askText({ title: translate('New playlist'), placeholder: translate('Playlist name'), ok: translate('Create') }); if (n) void createPlaylist(n, [t.id]) } },
+      ...playlists.value.filter(p => !p.archived).map(p => ({ label: p.name, icon: 'music' as const, run: () => { if (!p.trackIds.includes(t.id)) void updatePlaylist(p.id, { trackIds: [...p.trackIds, t.id] }); notify(translate("Added to {name}", { name: p.name })) } })),
+    ] },
+    { label: t.favorite ? translate("Remove from favorites") : translate("Add to favorites"), icon: 'heart', run: () => void toggleFavorite(t.id) },
+    { label: translate("Edit info…"), icon: 'edit', run: () => setEdit(true) },
+    { label: translate("Export file with edited tags (MP3/FLAC)"), icon: 'export', run: () => void exportWithTags(t.id) },
+    { label: translate("Delete from library"), icon: 'trash', danger: true, divider: true, run: () => deleteTrackWithUndo(t.id) },
+  ]
   return (
     <>
       <div class={`row${cur ? ' active' : ''}`} style={{ padding: 0 }}>
-        <button class="row" style={{ flex: 1, minWidth: 0 }} onClick={() => void playTracks(list, i)}>
+        <button class="row" style={{ flex: 1, minWidth: 0, height: '100%' }} onClick={() => void playTracks(list, i)}>
           <Art id={t.id} />
           <div class="grow"><div class="t">{t.favorite ? '♥ ' : ''}{t.title}</div><div class="s">{t.artist} · {t.album}</div></div>
           <span class="s num">{fmt(t.duration)}</span>
         </button>
-        <button aria-label={translate("More")} style={{ padding: '0 14px', fontSize: 20, color: 'var(--fg2)' }} onClick={() => setMenu(true)}>⋯</button>
+        <button class="more-btn" aria-label={translate("More")} onClick={() => setMenu(true)}><Icon name="dots" size={20} /></button>
       </div>
-      {menu && <ActionMenu items={items} onClose={() => setMenu(false)} />}
+      {menu && <GlassSheet title={t.title} subtitle={t.artist} items={items} onClose={() => setMenu(false)} />}
       {edit && <EditTrack id={t.id} onClose={() => setEdit(false)} />}
     </>
   )
@@ -74,7 +81,8 @@ function BookmarkList() {
 function Songs({ list, header }: { list: Track[]; header?: boolean }) {
   const [q, setQ] = useState('')
   const [key, setKey] = useState<'title' | 'artist' | 'album' | 'addedAt' | 'duration' | 'playCount'>('title')
-  const shown = useMemo(() => sortTracks(searchTracks(list, q), key, key === 'addedAt' || key === 'playCount' ? 'desc' : 'asc'), [list, q, key])
+  const dq = useDebounced(q, 120)
+  const shown = useMemo(() => sortTracks(searchTracks(list, dq), key, key === 'addedAt' || key === 'playCount' ? 'desc' : 'asc'), [list, dq, key])
   if (!list.length) return <div class="empty">{translate("Nothing here yet.")}</div>
   return (
     <>
@@ -86,17 +94,18 @@ function Songs({ list, header }: { list: Track[]; header?: boolean }) {
           <option value="title">{translate("Title")}</option><option value="artist">{translate("Artist")}</option><option value="album">{translate("Album")}</option><option value="addedAt">{translate("Recently added")}</option><option value="duration">{translate("Length")}</option><option value="playCount">{translate("Most played")}</option>
         </select>}
       </div>
-      <div class="group">{shown.map((t, i) => <SongRow key={t.id} t={t} list={shown} i={i} />)}</div>
+      {!shown.length && <div class="empty">{translate('No matches')}</div>}
+      <div class="group"><VirtualList items={shown} keyOf={t => t.id} render={(t, i) => <SongRow t={t} list={shown} i={i} />} /></div>
     </>
   )
 }
 
 function Groups({ groups, title }: { groups: TrackGroup[]; title: string }) {
   if (!groups.length) return <div class="empty">{translate('No {name} yet.', { name: title.toLowerCase() })}</div>
-  return <div class="group">{groups.map(g => (
-    <button class="row" onClick={() => push({ kind: 'group', title: g.key, ids: g.tracks.map(t => t.id) })}>
+  return <div class="group"><VirtualList items={groups} keyOf={g => g.key} render={g => (
+    <button class="row" style={{ height: '100%' }} onClick={() => push({ kind: 'group', title: g.key, ids: g.tracks.map(t => t.id) })}>
       <Art id={g.tracks[0]?.id} /><div class="grow"><div class="t">{g.key}</div><div class="s">{translate('songCount', { count: g.tracks.length })} · {fmt(g.duration)}</div></div><span class="chev">›</span>
-    </button>))}</div>
+    </button>)} /></div>
 }
 
 function PlaylistPage({ id }: { id: string }) {
@@ -133,7 +142,7 @@ export function Library() {
     case 'root':
       body = (
         <>
-          <div class="large-title">{translate("Library")}</div>
+          <h1 class="large-title">{translate("Library")}</h1>
           <div class="group">{ROOT.map(r => (
             <button class="row" onClick={() => push({ kind: r.kind })}><span class="icon" style={{ background: r.color }}>{r.icon}</span><div class="grow t">{translate(r.label)}</div>
               <span class="s">{r.kind === 'songs' ? all.length : r.kind === 'playlists' ? playlists.value.length : r.kind === 'favorites' ? all.filter(t => t.favorite).length : r.kind === 'audiobooks' ? everything.length - all.length : r.kind === 'bookmarks' ? bookmarks.value.length : ''}</span><span class="chev">›</span></button>))}</div>

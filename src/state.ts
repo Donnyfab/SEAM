@@ -3,14 +3,13 @@ import { signal, computed, effect } from '@preact/signals'
 import { PlaybackEngine, type EngineState, type PlayItem } from './audio/engine'
 import { BookPlayer, type BookState } from './audio/bookPlayer'
 import { isNeutral } from './audio/presets'
-import { gainForTarget, measureLufs, samplePeak } from './audio/loudness'
+import { gainForTarget } from './audio/loudness'
+import { excerptChannels, measureLoudnessAsync } from './audio/dspClient'
 import { makeTransition } from './core/crossfade'
 import { shuffleUpcoming, makeQueue } from './core/queue'
-import { importFiles } from './library/importer'
-import { finishAuth, setSourceSaver } from './connect/cloud'
-import { createAdapter, type RemoteNode, type Source } from './connect/sources'
+import type { RemoteNode, Source } from './connect/sources'
 import {
-  defaultSettings, loadSources, saveSources, loadBookmarks, loadPositions, savePositions, saveBookmarks, saveArt, type Bookmark, deleteTrack, loadArrangements, loadArt, loadFile, loadPlaylists, loadSettings, loadTracks,
+  defaultSettings, loadSources, saveSources, loadArtSmall, saveArtSmall, deleteArtSmall, deleteTrackRecord, deleteTrackFiles, findOrphans, loadBookmarks, loadPositions, savePositions, saveBookmarks, saveArt, type Bookmark, deleteTrack, loadArrangements, loadArt, loadFile, loadPlaylists, loadSettings, loadTracks,
   saveArrangements, savePlaylists, saveSettings, saveTrack, type Playlist, type Settings, type StoredTrack,
 } from './library/store'
 import type { Arrangement } from './core/arrangement'
@@ -27,6 +26,16 @@ export const bookmarks = signal<Bookmark[]>([])
 export const positions = signal<Record<string, number>>({})
 export const bookState = signal<BookState>({ status: 'idle', trackId: null, position: 0, duration: 0, rate: 1 })
 export const toast = signal<string | null>(null)
+export const undoToast = signal<{ msg: string; label: string; run: () => void } | null>(null)
+let undoPending: { expire: () => void; timer: ReturnType<typeof setTimeout> } | null = null
+/** Shows a toast with an Undo button. `expire` runs when the window closes without undo (or another undo toast replaces it). */
+export function notifyUndo(msg: string, undo: () => void, expire: () => void, ms = 6000) {
+  if (undoPending) { clearTimeout(undoPending.timer); undoPending.expire() }
+  const timer = setTimeout(() => { undoPending = null; undoToast.value = null; expire() }, ms)
+  undoPending = { expire, timer }
+  undoToast.value = { msg, label: translate('Undo'), run: () => { clearTimeout(timer); undoPending = null; undoToast.value = null; undo() } }
+}
+window.addEventListener('pagehide', () => { if (undoPending) { clearTimeout(undoPending.timer); undoPending.expire(); undoPending = null } })
 /** id of the arrangement currently being played from Studio, else null */
 export const playingArrangement = signal<string | null>(null)
 
@@ -38,15 +47,44 @@ export const trackById = computed(() => new Map([...tracks.value, ...ephemeral.v
 
 export function notify(msg: string) { toast.value = msg; setTimeout(() => { if (toast.value === msg) toast.value = null }, 3500) }
 
-// ---- artwork object URLs ----
+// ---- artwork object URLs (small thumbnails for lists, full size for big views) ----
 const artUrls = new Map<string, string | null>()
-export async function artworkUrl(id: string): Promise<string | null> {
-  if (artUrls.has(id)) return artUrls.get(id) ?? null
-  const b = await loadArt(id)
-  const url = b ? URL.createObjectURL(b) : null
-  artUrls.set(id, url)
-  return url
+const artInflight = new Map<string, Promise<string | null>>()
+let artSlots = 0
+const artWaiters: Array<() => void> = []
+const acquireArt = () => new Promise<void>(res => { const go = () => { artSlots++; res() }; if (artSlots < 3) go(); else artWaiters.push(go) })
+const releaseArt = () => { artSlots--; artWaiters.shift()?.() }
+
+async function makeSmall(id: string): Promise<Blob | undefined> {
+  const full = await loadArt(id); if (!full) return undefined
+  try {
+    const bmp = await createImageBitmap(full)
+    const sc = Math.min(1, 160 / Math.max(bmp.width, bmp.height))
+    const c = new OffscreenCanvas(Math.max(1, Math.round(bmp.width * sc)), Math.max(1, Math.round(bmp.height * sc)))
+    c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height); bmp.close()
+    const small = await c.convertToBlob({ type: 'image/jpeg', quality: 0.8 })
+    void saveArtSmall(id, small)
+    return small
+  } catch { return full }
 }
+
+export function artworkUrl(id: string, size: 'sm' | 'full' = 'sm'): Promise<string | null> {
+  const key = `${id}|${size}`
+  if (artUrls.has(key)) return Promise.resolve(artUrls.get(key) ?? null)
+  const pending = artInflight.get(key); if (pending) return pending
+  const p = (async () => {
+    await acquireArt()
+    try {
+      const blob = size === 'full' ? await loadArt(id) : ((await loadArtSmall(id)) ?? (await makeSmall(id)))
+      const url = blob ? URL.createObjectURL(blob) : null
+      artUrls.set(key, url)
+      return url
+    } finally { releaseArt() }
+  })().finally(() => artInflight.delete(key))
+  artInflight.set(key, p)
+  return p
+}
+const forgetArt = (id: string) => { for (const k of [`${id}|sm`, `${id}|full`]) { const u = artUrls.get(k); if (u) URL.revokeObjectURL(u); artUrls.delete(k) } }
 
 // ---- decoding with a small LRU ----
 const decoded = new Map<string, AudioBuffer>()
@@ -62,7 +100,6 @@ export function decodeTrack(id: string, ctx: BaseAudioContext): Promise<AudioBuf
     if (!blob) throw new Error(translate("Audio file missing from storage"))
     const buf = await ctx.decodeAudioData(await blob.arrayBuffer())
     decoded.set(id, buf)
-    void measureOnce(id, buf)
     while (decoded.size > 3) decoded.delete(decoded.keys().next().value as string)
     return buf
   })().finally(() => inflight.delete(id))
@@ -70,12 +107,18 @@ export function decodeTrack(id: string, ctx: BaseAudioContext): Promise<AudioBuf
   return p
 }
 
-/** Loudness is measured once per track (after the first decode) and stored with the track. */
-async function measureOnce(id: string, buf: AudioBuffer) {
+/**
+ * Loudness is only needed when normalization is on. It is measured once per track on a worker (≤2 min excerpt from the middle),
+ * then stored with the track, so playback never blocks on a full-file analysis.
+ */
+async function ensureLoudness(id: string, buf: AudioBuffer) {
   const t = trackById.peek().get(id)
   if (!t || t.lufs !== undefined) return
-  const ch = Array.from({ length: Math.min(buf.numberOfChannels, 2) }, (_, i) => buf.getChannelData(i))
-  const next = { ...t, lufs: measureLufs(ch, buf.sampleRate), peak: samplePeak(ch) }
+  const ch = excerptChannels(Array.from({ length: Math.min(buf.numberOfChannels, 2) }, (_, i) => buf.getChannelData(i)), buf.sampleRate, 120)
+  const m = await measureLoudnessAsync(ch, buf.sampleRate)
+  const cur = trackById.peek().get(id)
+  if (!cur) return
+  const next = { ...cur, lufs: m.lufs, peak: m.peak }
   tracks.value = tracks.peek().map(x => (x.id === id ? next : x))
   await saveTrack(next)
 }
@@ -90,6 +133,9 @@ export async function decodeTrackUncached(id: string, ctx: BaseAudioContext): Pr
 }
 
 let engine: PlaybackEngine | null = null
+/** Sample rate if the audio engine already exists (reading it must not create one). */
+export const engineSampleRate = () => engine?.ctx.sampleRate
+
 export function getEngine(): PlaybackEngine {
   if (engine) return engine
   engine = new PlaybackEngine()
@@ -124,7 +170,7 @@ export async function playBook(id: string, startAt?: number) {
   engine?.stop()
   const blob = await loadFile(id)
   if (!blob) return notify(translate("Audio file missing from storage"))
-  const url = await artworkUrl(id)
+  const url = await artworkUrl(id, 'full')
   try { await getBook().load(blob, { id, title: t.title, artist: t.artist, album: t.album, artwork: url ?? undefined }, startAt ?? positions.peek()[id] ?? 0, settings.peek().bookRate) }
   catch (e) { notify(e instanceof Error ? translate(e.message) : translate("Playback failed")) }
 }
@@ -155,24 +201,23 @@ export async function setArtwork(id: string, file: Blob) {
   const c = new OffscreenCanvas(Math.round(bmp.width * s), Math.round(bmp.height * s))
   c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height); bmp.close()
   await saveArt(id, await c.convertToBlob({ type: 'image/jpeg', quality: 0.85 }))
-  const old = artUrls.get(id); if (old) URL.revokeObjectURL(old)
-  artUrls.delete(id)
+  forgetArt(id)
+  await deleteArtSmall(id)
   tracks.value = [...tracks.peek()] // refresh listeners
 }
 
 export function toPlayItem(t: StoredTrack): PlayItem {
   return {
     id: t.id, title: t.title, artist: t.artist, album: t.album,
-    load: ctx => decodeTrack(t.id, ctx),
-    gainFor: buf => {
+    load: async ctx => {
+      const buf = await decodeTrack(t.id, ctx)
+      if (settings.peek().normalize) await ensureLoudness(t.id, buf).catch(() => {})
+      return buf
+    },
+    gainFor: () => {
       if (!settings.peek().normalize) return 1
       const cur = trackById.peek().get(t.id)
-      let lufs = cur?.lufs, peak = cur?.peak
-      if (lufs === undefined || peak === undefined) { // first play: measure inline so the very first listen is normalized too
-        const ch = Array.from({ length: Math.min(buf.numberOfChannels, 2) }, (_, i) => buf.getChannelData(i))
-        lufs = measureLufs(ch, buf.sampleRate); peak = samplePeak(ch)
-      }
-      return Number.isFinite(lufs) ? gainForTarget(lufs, settings.peek().targetLufs, peak) : 1
+      return cur?.lufs !== undefined && cur.peak !== undefined && Number.isFinite(cur.lufs) ? gainForTarget(cur.lufs, settings.peek().targetLufs, cur.peak) : 1
     },
   }
 }
@@ -213,7 +258,7 @@ export function remoteTrack(source: Source, node: RemoteNode): StoredTrack {
     id, title: m?.title ?? node.title, artist: m?.artist ?? translate("Unknown Artist"), album: m?.album ?? translate("Unknown Album"), duration: m?.duration ?? 0,
     trackNo: m?.trackNo, year: m?.year, genre: m?.genre, addedAt: Date.now(), playCount: 0, favorite: false, fileName: node.fileName ?? node.title,
   }
-  remoteLoaders.set(id, () => createAdapter(source).blob(node))
+  remoteLoaders.set(id, async () => (await import('./connect/sources')).createAdapter(source).blob(node))
   return t
 }
 
@@ -225,7 +270,7 @@ export async function playRemote(source: Source, nodes: RemoteNode[], start = 0)
 }
 
 export async function downloadRemote(source: Source, nodes: RemoteNode[], onProgress?: (d: number, t: number) => void) {
-  const adapter = createAdapter(source)
+  const adapter = (await import('./connect/sources')).createAdapter(source)
   const files: File[] = []
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i]!
@@ -250,6 +295,16 @@ export async function playStream(name: string, url: string) {
   catch { notify(translate("Could not play that stream. Browsers need https:// streams.")) }
 }
 
+/** Hide the song at once and delete for real after the undo window; the record is gone from storage immediately so it can't reappear. */
+export function deleteTrackWithUndo(id: string) {
+  const t = trackById.peek().get(id); if (!t) return
+  tracks.value = tracks.peek().filter(x => x.id !== id)
+  void deleteTrackRecord(id)
+  notifyUndo(translate('Deleted “{title}”', { title: t.title }),
+    () => { tracks.value = [...tracks.peek(), t]; void saveTrack(t) },
+    () => { void deleteTrackFiles(id); playlists.value = playlists.peek().map(p => ({ ...p, trackIds: p.trackIds.filter(x => x !== id) })); void savePlaylists(playlists.peek()) })
+}
+
 export async function removeTrack(id: string) {
   tracks.value = tracks.value.filter(t => t.id !== id)
   playlists.value = playlists.value.map(p => ({ ...p, trackIds: p.trackIds.filter(x => x !== id) }))
@@ -257,6 +312,7 @@ export async function removeTrack(id: string) {
 }
 
 export async function importAudio(files: File[], onProgress?: (d: number, t: number) => void) {
+  const { importFiles } = await import('./library/importer')
   const res = await importFiles(files, tracks.value, onProgress)
   tracks.value = [...tracks.value, ...res.added]
   if (res.failed.length) notify(translate("{length} file(s) failed: {name} — {reason}", { length: res.failed.length, name: res.failed[0]!.name, reason: res.failed[0]!.reason }))
@@ -331,9 +387,16 @@ export async function reloadAll() {
 
 export async function boot() {
   await reloadAll()
-  setSourceSaver(saveSource)
-  try { const s = await finishAuth(); if (s) { await saveSource(s); notify(translate("Connected to {name}", { name: s.name })) } } catch (e) { notify(e instanceof Error ? translate(e.message) : translate("Sign-in failed")) }
-  try { await navigator.storage?.persist?.() } catch { /* best effort */ }
+  if (/[?&]code=/.test(location.search) || sources.peek().some(x => x.kind === 'dropbox' || x.kind === 'gdrive' || x.kind === 'onedrive')) {
+    void import('./connect/cloud').then(async c => {
+      c.setSourceSaver(saveSource)
+      try { const s = await c.finishAuth(); if (s) { await saveSource(s); notify(translate('Connected to {name}', { name: s.name })) } }
+      catch (e) { notify(e instanceof Error ? translate(e.message) : translate('Sign-in failed')) }
+    })
+  }
+  void navigator.storage?.persist?.().catch(() => {}) // best effort; never block startup on it
   ready.value = true
+  // housekeeping off the critical path
+  setTimeout(() => { void findOrphans().then(ids => Promise.all(ids.map(deleteTrackFiles))).catch(() => {}) }, 4000)
 }
 export { makeTransition }

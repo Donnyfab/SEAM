@@ -8,7 +8,7 @@ import {
 import type { Playlist, StoredTrack } from '../library/store'
 import { exportM3U, exportSeamJson, matchEntries, moveItem, parsePlaylistFile, playlistDuration, searchPlaylists, sortPlaylists } from '../library/playlistIO'
 import { searchTracks, sortTracks } from '../library/model'
-import { Art, fmt, saveBlob } from './common'
+import { Art, fmt, saveBlob, useDebounced, useInView } from './common'
 import { askConfirm, askText, GlassMenu, GlassSheet, type GlassItem } from './Glass'
 import { Icon } from './Icon'
 import { EditTrack } from './Edit'
@@ -29,22 +29,31 @@ function durationLabel(sec: number): string {
 const listOf = (p: Playlist): StoredTrack[] => p.trackIds.map(i => trackById.value.get(i)).filter((x): x is StoredTrack => !!x)
 const durationOf = (p: Playlist) => playlistDuration(p, trackById.value)
 
-function Cover({ p, size }: { p: Playlist; size?: number }) {
-  const ids = p.trackIds.slice(0, 12)
-  const [urls, setUrls] = useState<(string | null)[]>([])
-  const key = `${p.id}|${p.customArt ? 1 : 0}|${ids.join(',')}|${tracks.value.length}`
+function Cover({ p, size, big }: { p: Playlist; size?: number; big?: boolean }) {
+  const [host, seen] = useInView<HTMLDivElement>()
+  const [urls, setUrls] = useState<{ custom: string | null; arts: string[] }>({ custom: null, arts: [] })
+  const key = `${p.id}|${p.customArt ? 1 : 0}|${p.trackIds.slice(0, 8).join(',')}`
   useEffect(() => {
+    if (!seen) return
     let live = true
-    void Promise.all([p.customArt ? artworkUrl(`pl:${p.id}`) : Promise.resolve(null), ...ids.map(i => artworkUrl(i))]).then(r => live && setUrls(r))
+    void (async () => {
+      const custom = p.customArt ? await artworkUrl(`pl:${p.id}`, big ? 'full' : 'sm') : null
+      const arts: string[] = []
+      if (!custom) for (const id of p.trackIds.slice(0, 8)) { // stop as soon as a 2x2 collage is possible
+        const u = await artworkUrl(id, big && !arts.length ? 'full' : 'sm')
+        if (u && !arts.includes(u)) arts.push(u)
+        if (arts.length >= 4 || !live) break
+      }
+      if (live) setUrls({ custom, arts })
+    })()
     return () => { live = false }
-  }, [key])
-  const custom = p.customArt ? urls[0] : null
-  const arts = [...new Set(urls.slice(1).filter((u): u is string => !!u))]
+  }, [key, seen])
   const style = size ? { width: `${size}px`, height: `${size}px`, borderRadius: '10px', fontSize: '22px' } : undefined
-  if (custom) return <div class="cover img" style={{ ...style, backgroundImage: `url(${custom})` }} />
-  if (arts.length >= 4) return <div class="cover collage" style={style}>{arts.slice(0, 4).map(u => <i style={{ backgroundImage: `url(${u})` }} />)}</div>
-  if (arts[0]) return <div class="cover img" style={{ ...style, backgroundImage: `url(${arts[0]})` }} />
-  return <div class="cover" style={style}>♪</div>
+  const { custom, arts } = urls
+  if (custom) return <div ref={host} class="cover img" style={{ ...style, backgroundImage: `url(${custom})` }} />
+  if (arts.length >= 4) return <div ref={host} class="cover collage" style={style}>{arts.slice(0, 4).map(u => <i style={{ backgroundImage: `url(${u})` }} />)}</div>
+  if (arts[0]) return <div ref={host} class="cover img" style={{ ...style, backgroundImage: `url(${arts[0]})` }} />
+  return <div ref={host} class="cover" style={style}>♪</div>
 }
 
 function TrackPicker({ title, onDone, onClose }: { title: string; onDone: (ids: string[]) => void; onClose: () => void }) {
@@ -133,6 +142,7 @@ function PlaylistList() {
   const [menu, setMenu] = useState<'plus' | 'more' | null>(null)
   const [searching, setSearching] = useState(false)
   const [q, setQ] = useState('')
+  const dq = useDebounced(q, 120)
   const [selecting, setSelecting] = useState(false)
   const [sel, setSel] = useState<string[]>([])
   const [help, setHelp] = useState(false)
@@ -141,7 +151,7 @@ function PlaylistList() {
 
   const byId = trackById.value
   const all = playlists.value
-  const active = useMemo(() => sortPlaylists(searchPlaylists(all.filter(p => !p.archived), q, byId), s.playlistSortKey, s.playlistSortDir, byId), [all, q, s.playlistSortKey, s.playlistSortDir, byId])
+  const active = useMemo(() => sortPlaylists(searchPlaylists(all.filter(p => !p.archived), dq, byId), s.playlistSortKey, s.playlistSortDir, byId), [all, dq, s.playlistSortKey, s.playlistSortDir, byId])
   const archived = all.filter(p => p.archived)
   const allTracks = useMemo(() => active.flatMap(listOf), [active])
   const exitSelect = () => { setSelecting(false); setSel([]) }
@@ -324,7 +334,7 @@ function PlaylistDetail({ id }: { id: string }) {
           : <button class="circle-btn" aria-label={translate('More')} onClick={() => setMenu(true)}><Icon name="dots" /></button>}
       </div>
       <div class="detail-hero">
-        <Cover p={p} />
+        <Cover p={p} big />
         <h2>{p.name}</h2><div class="dur">{durationLabel(durationOf(p))}</div>
       </div>
       <div class="ctl-row">

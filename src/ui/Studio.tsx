@@ -109,7 +109,7 @@ export function Studio() {
   if (!a) {
     return (
       <>
-        <div class="large-title">{translate("Studio")}</div>
+        <h1 class="large-title">{translate("Studio")}</h1>
         <div class="empty">{translate("Arrange unreleased songs into an EP, tune every transition and preview the result.")}<br /><br /><button class="btn" onClick={() => create(translate("My EP"))}>{translate("Start an arrangement")}</button></div>
       </>
     )
@@ -148,7 +148,7 @@ export function Studio() {
 
   return (
     <>
-      <div class="large-title">{translate("Studio")}</div>
+      <h1 class="large-title">{translate("Studio")}</h1>
       <div class="actions">
         <select aria-label={translate("Arrangement")} value={a.id} onChange={e => { currentId.value = (e.target as HTMLSelectElement).value; selected.value = 0 }} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '8px 10px', width: '100%' }}>
           {list.map(x => <option value={x.id}>{x.name}</option>)}

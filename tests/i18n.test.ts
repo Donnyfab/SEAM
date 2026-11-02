@@ -5,7 +5,9 @@ import en from '../src/i18n/en'
 import es from '../src/i18n/es'
 import fr from '../src/i18n/fr'
 import de from '../src/i18n/de'
-import { getLocale, locale, resolveLocale, setLocale, t } from '../src/i18n'
+import { getLocale, locale, registerLocale, resolveLocale, setLocale, t } from '../src/i18n'
+
+registerLocale('es', es); registerLocale('fr', fr); registerLocale('de', de)
 
 const stored = vi.hoisted(() => new Map<string, unknown>())
 vi.mock('idb-keyval', () => ({

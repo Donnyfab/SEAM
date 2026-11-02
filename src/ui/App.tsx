@@ -1,18 +1,22 @@
-import { resolveLocale, setLocale, t as translate } from '../i18n'
-import { useEffect, useLayoutEffect, useState } from 'preact/hooks'
-import { ready, toast, engineState, queueIds, bookState, settings } from '../state'
+import { resolveLocale, setLocaleAsync, t as translate } from '../i18n'
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
+import { signal } from '@preact/signals'
+import { ready, toast, undoToast, notify, engineState, queueIds, bookState, settings } from '../state'
 import { LockScreen, initLock, locked } from './Security'
-import { loadLastFm } from '../connect/scrobbler'
-import { Library } from './Library'
 import { Playlists } from './Playlists'
 import { DialogHost } from './Glass'
-import { Settings } from './Settings'
-import { Studio } from './Studio'
-import { Connect } from './Connect'
 import { MiniPlayer, NowPlaying } from './Player'
-import { BookSheet, MiniBook } from './Book'
+import { MiniBook } from './Book'
+import { Boundary, ScreenSkeleton, lazyScreen } from './lazy'
+
+const Library = lazyScreen(() => import('./Library'), 'Library')
+const Studio = lazyScreen(() => import('./Studio'), 'Studio')
+const Connect = lazyScreen(() => import('./Connect'), 'Connect')
+const Settings = lazyScreen(() => import('./Settings'), 'Settings')
+const BookSheet = lazyScreen<{ onClose: () => void }>(() => import('./Book'), 'BookSheet')
 
 type Tab = 'playlists' | 'library' | 'studio' | 'connect' | 'settings'
+const TABS: Tab[] = ['playlists', 'library', 'studio', 'connect', 'settings']
 const icons: Record<Tab, string> = {
   playlists: 'M4 6h12M4 11h12M4 16h7M19 4v11M19 15a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z',
   library: 'M9 18V5l10-2v13M9 18a3 3 0 11-6 0 3 3 0 016 0zm10-2a3 3 0 11-6 0 3 3 0 016 0z',
@@ -22,10 +26,36 @@ const icons: Record<Tab, string> = {
 }
 const labels: Record<Tab, string> = { playlists: 'Playlists', library: 'Library', studio: 'Studio', connect: 'Connect', settings: 'Settings' }
 
+const online = signal(navigator.onLine)
+const readTab = (): Tab => { try { const t = localStorage.getItem('seam:tab') as Tab | null; return t && TABS.includes(t) ? t : 'playlists' } catch { return 'playlists' } }
+const scrollMemory = new Map<Tab, number>()
+
 export function App() {
-  const [tab, setTab] = useState<Tab>('playlists')
+  const [tab, setTabState] = useState<Tab>(readTab)
   const [open, setOpen] = useState(false)
-  useEffect(() => { performance.mark('seam:first-render'); void initLock(); void loadLastFm() }, [])
+  const view = useRef<HTMLElement>(null)
+
+  const setTab = (next: Tab) => {
+    if (next === tab) { view.current?.scrollTo({ top: 0, behavior: 'smooth' }); return } // tapping the active tab scrolls to top, like iOS
+    scrollMemory.set(tab, view.current?.scrollTop ?? 0)
+    setTabState(next)
+    try { localStorage.setItem('seam:tab', next) } catch { /* private mode */ }
+  }
+  // Restore the scroll position of the tab we return to.
+  useLayoutEffect(() => { const y = scrollMemory.get(tab) ?? 0; requestAnimationFrame(() => view.current?.scrollTo({ top: y })) }, [tab, ready.value])
+
+  useEffect(() => {
+    performance.mark('seam:first-render')
+    void initLock()
+    // Warm the likely next screens and the Last.fm service once the first paint is done.
+    const idle = (window as unknown as { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1500))
+    idle(() => { void Library.preload().catch(() => {}); void Studio.preload().catch(() => {}); void import('../connect/scrobbler').then(m => m.loadLastFm()).catch(() => {}) })
+    const on = () => { online.value = true; notify(translate('Back online')) }, off = () => { online.value = false }
+    const saveErr = () => notify(translate('Could not save your changes. Storage may be full.'))
+    const rejection = (e: PromiseRejectionEvent) => { const r = e.reason; if (r && (r.name === 'AbortError' || /abort/i.test(String(r.message)))) return; console.error(r) }
+    window.addEventListener('online', on); window.addEventListener('offline', off); window.addEventListener('seam:save-error', saveErr); window.addEventListener('unhandledrejection', rejection)
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); window.removeEventListener('seam:save-error', saveErr); window.removeEventListener('unhandledrejection', rejection) }
+  }, [])
   useEffect(() => {
     const r = document.documentElement, st = settings.value
     r.style.fontSize = `${17 * st.textScale}px`
@@ -34,30 +64,36 @@ export function App() {
   useLayoutEffect(() => {
     const applyLanguage = () => {
       const code = resolveLocale(settings.value.language, navigator.languages)
-      setLocale(code); document.documentElement.lang = code
+      void setLocaleAsync(code); document.documentElement.lang = code
     }
     applyLanguage()
     window.addEventListener('languagechange', applyLanguage)
     return () => window.removeEventListener('languagechange', applyLanguage)
   }, [settings.value.language])
+
   const bookActive = bookState.value.status !== 'idle' && !!bookState.value.trackId
   const hasTrack = bookActive || (engineState.value.index >= 0 && !!queueIds.value[engineState.value.index])
+  const Current = tab === 'library' ? Library.Screen : tab === 'studio' ? Studio.Screen : tab === 'connect' ? Connect.Screen : tab === 'settings' ? Settings.Screen : null
   return (
     <div class="app">
-      <main class={`view${hasTrack ? '' : ' no-mini'}`}>
-        {!ready.value ? <div class="empty">{translate("Loading…")}</div> : tab === 'playlists' ? <Playlists /> : tab === 'library' ? <Library /> : tab === 'studio' ? <Studio /> : tab === 'connect' ? <Connect /> : <Settings />}
+      <main class={`view${hasTrack ? '' : ' no-mini'}`} ref={view} id="main" aria-label={translate(labels[tab])}>
+        {!online.value && <div class="offline-banner" role="status">{translate('You are offline. Your downloaded library still plays; servers and cloud sources need a connection.')}</div>}
+        <Boundary resetKey={tab}>
+          {!ready.value ? <ScreenSkeleton /> : Current ? <Current /> : <Playlists />}
+        </Boundary>
       </main>
       {hasTrack && (bookActive ? <MiniBook onOpen={() => setOpen(true)} /> : <MiniPlayer onOpen={() => setOpen(true)} />)}
       <nav class="tabbar" aria-label={translate("Main")}>
-        {(Object.keys(icons) as Tab[]).map(t => (
-          <button class={tab === t ? 'on' : ''} onClick={() => setTab(t)} aria-label={translate(labels[t])} aria-current={tab === t ? 'page' : undefined}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={icons[t]} /></svg>{translate(labels[t])}
+        {TABS.map(t => (
+          <button class={tab === t ? 'on' : ''} onClick={() => setTab(t)} onPointerEnter={() => { if (t === 'library') void Library.preload().catch(() => {}); if (t === 'studio') void Studio.preload().catch(() => {}); if (t === 'connect') void Connect.preload().catch(() => {}); if (t === 'settings') void Settings.preload().catch(() => {}) }} aria-label={translate(labels[t])} aria-current={tab === t ? 'page' : undefined}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={icons[t]} /></svg>{translate(labels[t])}
           </button>))}
       </nav>
-      {open && (bookActive ? <BookSheet onClose={() => setOpen(false)} /> : <NowPlaying onClose={() => setOpen(false)} />)}
+      {open && <Boundary>{bookActive ? <BookSheet.Screen onClose={() => setOpen(false)} /> : <NowPlaying onClose={() => setOpen(false)} />}</Boundary>}
       <DialogHost />
       {locked.value && <LockScreen />}
       {toast.value && <div class="toast" role="status">{toast.value}</div>}
+      {undoToast.value && <div class="toast undo-toast" role="status"><span>{undoToast.value.msg}</span><button onClick={undoToast.value.run}>{undoToast.value.label}</button></div>}
     </div>
   )
 }

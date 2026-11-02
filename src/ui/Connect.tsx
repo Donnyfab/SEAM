@@ -144,7 +144,7 @@ export function Connect() {
   if (src) return src.kind === 'radio' ? <Radio source={src} onBack={() => setActive(null)} /> : <Browser source={src} onBack={() => setActive(null)} />
   return (
     <>
-      <div class="large-title">{translate("Connect")}</div>
+      <h1 class="large-title">{translate("Connect")}</h1>
       {list.length > 0 && <div class="group">{list.map(s => { const k = kindInfo(s.kind); return (
         <div class="row" style={{ padding: 0 }}>
           <button class="row" style={{ flex: 1, minWidth: 0 }} onClick={() => setActive(s.id)}><span class="icon" style={{ background: k?.color }}>{k?.icon}</span><div class="grow"><div class="t">{s.name}</div><div class="s">{translate(k?.label ?? '')}{s.url ? ` · ${s.url.replace(/^https?:\/\//, '')}` : ''}</div></div><span class="chev">›</span></button>

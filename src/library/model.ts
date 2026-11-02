@@ -26,12 +26,21 @@ function normalize(text: string): string {
   return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
 }
 
+const haystacks = new WeakMap<object, string>()
+/** Normalised search text per track, built once per track object (tracks are replaced, never mutated). */
+function haystack(track: Track): string {
+  let h = haystacks.get(track)
+  if (h === undefined) {
+    h = [track.title, track.artist, track.album, track.genre ?? '', track.composer ?? ''].map(normalize).join('\n')
+    haystacks.set(track, h)
+  }
+  return h
+}
+
 export function searchTracks(tracks: readonly Track[], query: string): Track[] {
   const terms = normalize(query).split(/\s+/u).filter(Boolean)
-  return tracks.filter(track => {
-    const fields = [track.title, track.artist, track.album, track.genre ?? '', track.composer ?? ''].map(normalize)
-    return terms.every(term => fields.some(field => field.includes(term)))
-  })
+  if (!terms.length) return [...tracks]
+  return tracks.filter(track => { const h = haystack(track); return terms.every(term => h.includes(term)) })
 }
 
 export function sortTracks(tracks: readonly Track[], key: TrackSortKey, dir: 'asc' | 'desc' = 'asc'): Track[] {

@@ -2,7 +2,7 @@ import { t as translate } from '../i18n'
 import { Sound } from './Sound'
 import { AccessibilitySettings, BackupSettings, LastFmSettings } from './SettingsMore'
 import { PasscodeSettings } from './Security'
-import { getEngine, settings, updateSettings } from '../state'
+import { engineSampleRate, settings, updateSettings } from '../state'
 
 const SectionTitle = ({ children }: { children: unknown }) => <div class="hint" style={{ margin: '18px 16px 0', textTransform: 'uppercase' }}>{children as never}</div>
 
@@ -11,7 +11,7 @@ export function Settings() {
   const standalone = (navigator as unknown as { standalone?: boolean }).standalone === true || matchMedia('(display-mode: standalone)').matches
   return (
     <>
-      <div class="large-title">{translate("Settings")}</div>
+      <h1 class="large-title">{translate("Settings")}</h1>
       <div class="group">
         <label class="field"><span>{translate('Language')}</span><select value={s.language} onChange={e => void updateSettings({ language: (e.target as HTMLSelectElement).value as typeof s.language })} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '6px 8px' }}><option value="auto">{translate('Automatic')}</option><option value="en">{translate('English')}</option><option value="es">{translate('Spanish')}</option><option value="fr">{translate('French')}</option><option value="de">{translate('German')}</option></select></label>
         <label class="field"><span>{translate("Default crossfade")}</span><span class="num">{s.crossfade === 0 ? translate("Off") : translate('{value}s', { value: s.crossfade })}</span></label>
@@ -36,7 +36,7 @@ export function Settings() {
       <SectionTitle>{translate("Backup & restore")}</SectionTitle><BackupSettings />
       <div class="group">
         <div class="kv"><span>{translate("Installed as app")}</span><span>{standalone ? translate("Yes") : translate("No — Share → Add to Home Screen")}</span></div>
-        <div class="kv"><span>{translate("Audio output rate")}</span><span>{getEngine().ctx.sampleRate}{translate(" Hz")}</span></div>
+        <div class="kv"><span>{translate("Audio output rate")}</span><span>{engineSampleRate() ?? '—'}{translate(" Hz")}</span></div>
         <div class="kv"><span>{translate("Version")}</span><span>0.1.0</span></div>
       </div>
       <div class="hint">{translate("Everything stays on your device. SEAM has no account, ads or tracking.")}</div>
