@@ -3,6 +3,8 @@ import { useRef, useState } from 'preact/hooks'
 import { addBookmark, engineState, getEngine, queueIds, settings, shuffle, trackById, updateSettings, toggleFavorite } from '../state'
 import { Art, fmt, useClock, useFrame, useSheet } from './common'
 import { Visualizer } from './Visualizer'
+import { Icon } from './Icon'
+import { artPalette, useGlow } from './artColor'
 
 
 /** Thin progress line: written straight to the DOM each frame, so playback never re-renders the component tree. */
@@ -77,12 +79,13 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
   const [lyrics, setLyrics] = useState(false)
   const { ref, grabProps } = useSheet(onClose)
   const dur = s.duration || t?.duration || 0
+  useGlow(() => artPalette(t?.id), t?.id ?? '')
   if (!t) return null
   return (
-    <div class="sheet" role="dialog" aria-modal="true" aria-label={translate("Now playing")} ref={ref} tabIndex={-1}>
+    <div class="sheet np glow-bg" role="dialog" aria-modal="true" aria-label={translate("Now playing")} ref={ref} tabIndex={-1}>
       <div class="grab-area" {...(grabProps as object)}><button class="grab-btn" aria-label={translate("Close")} onClick={onClose}><div class="grab" /></button></div>
-      {lyrics && t.lyrics ? <div class="group" style={{ margin: 0, padding: 16, whiteSpace: 'pre-wrap', maxHeight: '45vh', overflowY: 'auto' }}>{t.lyrics}</div> : <div style={{ maxWidth: 360, width: '100%', margin: '0 auto' }}><Art id={t.id} big /></div>}
-      <Visualizer />
+      {lyrics && t.lyrics ? <div class="group" style={{ margin: 0, padding: 16, whiteSpace: 'pre-wrap', maxHeight: '45vh', overflowY: 'auto' }}>{t.lyrics}</div> : <div class="np-art"><Art id={t.id} big /></div>}
+      <Visualizer height={72} />
       <h2 class="np-title">{t.title}</h2>
       <div class="np-sub">{t.artist} — {t.album}</div>
       <div style={{ marginTop: 14 }}>
@@ -90,16 +93,16 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
         <Times duration={dur} />
       </div>
       <div class="controls">
-        <button aria-label={translate("Previous")} onClick={() => void e.previous()}>⏮</button>
-        <button class="play" aria-label={s.status === 'playing' ? translate("Pause") : translate("Play")} onClick={() => void e.toggle()}>{s.status === 'loading' ? <span class="spinner big" /> : s.status === 'playing' ? '⏸' : '▶'}</button>
-        <button aria-label={translate("Next")} onClick={() => void e.next()}>⏭</button>
+        <button aria-label={translate("Previous")} onClick={() => void e.previous()}><Icon name="prev" size={26} fill /></button>
+        <button class="play" aria-label={s.status === 'playing' ? translate("Pause") : translate("Play")} onClick={() => void e.toggle()}>{s.status === 'loading' ? <span class="spinner big" /> : s.status === 'playing' ? <Icon name="pause" size={30} fill /> : <Icon name="play" size={30} fill />}</button>
+        <button aria-label={translate("Next")} onClick={() => void e.next()}><Icon name="playNext" size={26} fill /></button>
       </div>
-      <div class="toggles" style={{ flexWrap: 'wrap', rowGap: 10 }}>
-        <button class={shuffle.value ? 'on' : ''} aria-pressed={shuffle.value} onClick={() => { shuffle.value = !shuffle.value }}>{translate("Shuffle")}</button>
-        <button class={settings.value.repeat !== 'off' ? 'on' : ''} onClick={() => void updateSettings({ repeat: settings.value.repeat === 'off' ? 'all' : settings.value.repeat === 'all' ? 'one' : 'off' })}>{translate("Repeat: ")}{translate(settings.value.repeat)}</button>
-        {t.lyrics && <button class={lyrics ? 'on' : ''} aria-pressed={lyrics} onClick={() => setLyrics(!lyrics)}>{translate("Lyrics")}</button>}
-        <button onClick={() => void addBookmark(t.id, getEngine().position())}>{translate("🔖 Bookmark")}</button>
-        <button class={t.favorite ? 'on' : ''} aria-pressed={t.favorite} onClick={() => void toggleFavorite(t.id)}>{t.favorite ? translate("♥ Favorite") : translate("♡ Favorite")}</button>
+      <div class="toggles">
+        <button class={shuffle.value ? 'on' : ''} aria-pressed={shuffle.value} onClick={() => { shuffle.value = !shuffle.value }}><Icon name="shuffle" size={20} /><span>{translate("Shuffle")}</span></button>
+        <button class={settings.value.repeat !== 'off' ? 'on' : ''} onClick={() => void updateSettings({ repeat: settings.value.repeat === 'off' ? 'all' : settings.value.repeat === 'all' ? 'one' : 'off' })}><Icon name="repeat" size={20} /><span>{translate("Repeat: ")}{translate(settings.value.repeat)}</span></button>
+        <button onClick={() => void addBookmark(t.id, getEngine().position())}><Icon name="bookmark" size={20} /><span>{translate("Bookmark")}</span></button>
+        <button class={t.favorite ? 'on' : ''} aria-pressed={t.favorite} onClick={() => void toggleFavorite(t.id)}><Icon name="heart" size={20} fill={t.favorite} /><span>{translate("Favorite")}</span></button>
+        {t.lyrics && <button class={lyrics ? 'on' : ''} aria-pressed={lyrics} onClick={() => setLyrics(!lyrics)}><Icon name="list" size={20} /><span>{translate("Lyrics")}</span></button>}
       </div>
       <div class="group" style={{ margin: '18px 0 0' }}>
         <label class="field"><span>{translate("Crossfade")}</span><span class="num">{settings.value.crossfade === 0 ? translate("Off (gapless)") : translate('{value}s', { value: settings.value.crossfade })}</span></label>

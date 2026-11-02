@@ -400,6 +400,7 @@ export const es: Record<string, string> = {
   "{value} MB": "{value} MB",
   "Audio file missing from storage": "Falta el archivo de audio en el almacenamiento",
   "Playback failed": "Error de reproducción",
+  "Favorite": "Favorito",
   "Bookmark": "Marcador",
   "Bookmark added": "Marcador añadido",
   "That song was deleted": "Esa canción fue eliminada",

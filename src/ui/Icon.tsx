@@ -30,6 +30,10 @@ const P: Record<string, string> = {
   minus: 'M5 12h14',
   heart: 'M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.600-7 10-7 10z',
   music: 'M9 18V6l10-2v12M9 18a3 3 0 11-6 0 3 3 0 016 0zM19 16a3 3 0 11-6 0 3 3 0 016 0z',
+  prev: 'M19 5v14L8 12zM5 5v14',
+  pause: 'M7 5h3v14H7zM14 5h3v14h-3z',
+  repeat: 'M17 2l4 4-4 4M3 11V9a3 3 0 013-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 01-3 3H3',
+  bookmark: 'M6 4h12v17l-6-4-6 4z',
   restore: 'M4 12a8 8 0 108-8M4 4v5h5',
 }
 export type IconName = keyof typeof P

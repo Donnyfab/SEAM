@@ -13,7 +13,7 @@ export function Visualizer({ height = 110 }: { height?: number }) {
     const g = c.getContext('2d')!
     const dpr = window.devicePixelRatio || 1
     let raf = 0
-    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#0a84ff'
+    const accent = getComputedStyle(c).getPropertyValue('--accent').trim() || '#0a84ff'
     const draw = () => {
       const w = c.clientWidth, h = c.clientHeight
       if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr) }

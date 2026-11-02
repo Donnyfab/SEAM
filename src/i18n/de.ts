@@ -400,6 +400,7 @@ export const de: Record<string, string> = {
   "{value} MB": "{value} MB",
   "Audio file missing from storage": "Audiodatei fehlt im Speicher",
   "Playback failed": "Wiedergabe fehlgeschlagen",
+  "Favorite": "Favorit",
   "Bookmark": "Lesezeichen",
   "Bookmark added": "Lesezeichen hinzugefügt",
   "That song was deleted": "Dieser Song wurde gelöscht",

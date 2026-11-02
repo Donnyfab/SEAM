@@ -77,6 +77,7 @@ export function App() {
   const Current = tab === 'library' ? Library.Screen : tab === 'studio' ? Studio.Screen : tab === 'connect' ? Connect.Screen : tab === 'settings' ? Settings.Screen : null
   return (
     <div class="app">
+      <div class="glow glow-bg" aria-hidden="true" />
       <main class={`view${hasTrack ? '' : ' no-mini'}`} ref={view} id="main" aria-label={translate(labels[tab])}>
         {!online.value && <div class="offline-banner" role="status">{translate('You are offline. Your downloaded library still plays; servers and cloud sources need a connection.')}</div>}
         <Boundary resetKey={tab}>

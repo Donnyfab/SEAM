@@ -9,6 +9,8 @@ import type { Playlist, StoredTrack } from '../library/store'
 import { exportM3U, exportSeamJson, matchEntries, moveItem, parsePlaylistFile, playlistDuration, searchPlaylists, sortPlaylists } from '../library/playlistIO'
 import { searchTracks, sortTracks } from '../library/model'
 import { Art, fmt, saveBlob, useDebounced, useEdgeSwipeBack, useInView, useSheet } from './common'
+import { useGlow, playlistPalette } from './artColor'
+import { NEUTRAL } from '../core/palette'
 import { askConfirm, askText, GlassMenu, GlassSheet, type GlassItem } from './Glass'
 import { Icon } from './Icon'
 import { EditTrack } from './Edit'
@@ -279,6 +281,7 @@ function PlaylistDetail({ id }: { id: string }) {
   const manual = sort === 'manual' && !q
   const sortable = useSortable({ count: shown.length, handleSelector: '.handle', onMove: (from, to) => { if (p && manual) void updatePlaylist(p.id, { trackIds: moveItem(p.trackIds, from, to) }) } })
   useEffect(() => { if (!rearrange) return; setSort('manual'); setQ(''); setSearching(false) }, [rearrange])
+  useGlow(() => (p ? playlistPalette(p) : Promise.resolve(NEUTRAL)), p ? `${p.id}|${p.customArt ? 1 : 0}|${p.trackIds.slice(0, 6).join(',')}` : '')
   if (!p) return <div class="empty">{translate('Playlist deleted.')}</div>
 
   const pick = (x: StoredTrack) => setSel(s => (s.includes(x.id) ? s.filter(y => y !== x.id) : [...s, x.id]))
@@ -330,7 +333,7 @@ function PlaylistDetail({ id }: { id: string }) {
     )
   }
   return (
-    <>
+    <div class="glass-page">
       <div class="pl-nav">
         <button class="circle-btn" aria-label={translate('Back')} onClick={() => { if (rearrange) setRearrange(false); else if (selecting) exitSelect(); else back() }}><Icon name="chevL" /></button>
         <h1>{rearrange ? translate('Rearrange songs') : selecting ? translate('{count} selected', { count: sel.length }) : p.name}</h1>
@@ -351,11 +354,11 @@ function PlaylistDetail({ id }: { id: string }) {
       {searching && <div class="pl-search"><Icon name="search" size={18} /><input autofocus type="search" enterkeyhint="search" onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setSearching(false); setQ('') } else if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} placeholder={translate('Search this playlist')} value={q} onInput={e => setQ((e.target as HTMLInputElement).value)} /><button aria-label={translate('Cancel')} onClick={() => { setSearching(false); setQ('') }}>✕</button></div>}
       {sort !== 'manual' && <div class="hint" style={{ margin: '0 16px 8px' }}>{translate('Sorted view — choose Sort › Playlist order to rearrange.')}</div>}
       {!all.length && <div class="empty">{translate('This playlist is empty.')}<div style={{ marginTop: 16 }}><button class="btn" onClick={() => setAdding(true)}>{translate('Add songs')}</button></div></div>}
-      {grid ? <div class="pl-grid">{shown.map((x, i) => (
+      {grid ? <div class="pl-grid glass-list">{shown.map((x, i) => (
         <div class="pl-card"><button style={{ display: 'block', width: '100%' }} onClick={() => (selecting ? pick(x) : void playTracks(shown, i))}><div class="cover img" style={{}}><Art id={x.id} big /></div></button>
           {selecting && <span class={`sel-badge${sel.includes(x.id) ? ' on' : ''}`}><Icon name={sel.includes(x.id) ? 'check' : 'circle'} size={18} /></span>}
           <div class="name">{x.title}</div><div class="sub">{x.artist}</div></div>))}</div>
-        : <div {...((rearrange && manual ? sortable.containerProps : {}) as object)}>{shown.map(rowFor)}</div>}
+        : <div class="glass-list" {...((rearrange && manual ? sortable.containerProps : {}) as object)}>{shown.map(rowFor)}</div>}
       {q && !shown.length && <div class="empty">{translate('No matches')}</div>}
 
       {selecting && (
@@ -370,7 +373,7 @@ function PlaylistDetail({ id }: { id: string }) {
       {rowSheet && <GlassSheet title={rowSheet.title} subtitle={rowSheet.artist} items={songItems(rowSheet)} onClose={() => setRowSheet(null)} />}
       {adding && <TrackPicker title={translate('Add songs')} onDone={ids => { void updatePlaylist(p.id, { trackIds: [...p.trackIds, ...ids.filter(i => !p.trackIds.includes(i))] }); notify(translate('addedSongs', { count: ids.length })) }} onClose={() => setAdding(false)} />}
       {edit && <EditTrack id={edit} onClose={() => setEdit(null)} />}
-    </>
+    </div>
   )
 }
 

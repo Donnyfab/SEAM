@@ -330,6 +330,7 @@ export const en: Record<string, string> = {
   "{value} MB": "{value} MB",
   "Audio file missing from storage": "Audio file missing from storage",
   "Playback failed": "Playback failed",
+  "Favorite": "Favorite",
   "Bookmark": "Bookmark",
   "Bookmark added": "Bookmark added",
   "That song was deleted": "That song was deleted",
