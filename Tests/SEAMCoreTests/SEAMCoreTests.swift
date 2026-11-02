@@ -53,6 +53,34 @@ import Foundation
         let c = Clip(title: "T", sourceDuration: 50, trimStart: -5, trimEnd: 999)
         #expect(c.trimStart == 0 && c.trimEnd == 50)
     }
+    @Test func edgeFadesDefaultToZero() {
+        let c = Clip(title: "T", sourceDuration: 50)
+        #expect(c.fadeIn == 0 && c.fadeOut == 0)
+    }
+    @Test func edgeFadesClampToPlayableDuration() {
+        for (requested, expected) in [(-5.0, 0.0), (3, 3), (20, 20), (999, 20)] {
+            let c = Clip(title: "T", sourceDuration: 100, trimStart: 10, trimEnd: 30,
+                         fadeIn: requested, fadeOut: requested)
+            #expect(c.fadeIn == expected && c.fadeOut == expected)
+            #expect(c.playableDuration == 20)
+        }
+        let empty = Clip(title: "Empty", sourceDuration: 10, trimStart: 10,
+                         fadeIn: 5, fadeOut: 5)
+        #expect(empty.fadeIn == 0 && empty.fadeOut == 0)
+    }
+    @Test func edgeFadesCodableCompatibility() throws {
+        let legacy = Data("""
+        {"id":"00000000-0000-0000-0000-000000000002","title":"Legacy",
+         "sourceDuration":100,"trimStart":10,"trimEnd":90}
+        """.utf8)
+        let decoded = try JSONDecoder().decode(Clip.self, from: legacy)
+        #expect(decoded.fadeIn == 0 && decoded.fadeOut == 0)
+        #expect(decoded.title == "Legacy" && decoded.playableDuration == 80)
+        let clip = Clip(id: decoded.id, title: decoded.title, sourceDuration: 100,
+                        trimStart: 10, trimEnd: 90, fadeIn: 2, fadeOut: 5)
+        let data = try JSONEncoder().encode(clip)
+        #expect(try JSONDecoder().decode(Clip.self, from: data) == clip)
+    }
     @Test func reorderResetsTransitions() {
         var a = make()
         a.transitions[0] = TransitionSettings(duration: 5)

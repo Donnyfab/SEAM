@@ -1,21 +1,43 @@
 import Foundation
 
-/// A non-destructive view onto a source file: only start/end offsets are stored.
+/// A non-destructive view onto a source file with trim offsets and edge fades.
 public struct Clip: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID
     public var title: String
     public var sourceDuration: TimeInterval
     public var trimStart: TimeInterval
     public var trimEnd: TimeInterval
+    public var fadeIn: TimeInterval
+    public var fadeOut: TimeInterval
 
     public init(id: UUID = UUID(), title: String, sourceDuration: TimeInterval,
-                trimStart: TimeInterval = 0, trimEnd: TimeInterval? = nil) {
+                trimStart: TimeInterval = 0, trimEnd: TimeInterval? = nil,
+                fadeIn: TimeInterval = 0, fadeOut: TimeInterval = 0) {
         self.id = id
         self.title = title
         self.sourceDuration = max(sourceDuration, 0)
         let end = min(max(trimEnd ?? sourceDuration, 0), self.sourceDuration)
         self.trimStart = min(max(trimStart, 0), end)
         self.trimEnd = end
+        self.fadeIn = min(max(fadeIn, 0), end - self.trimStart)
+        self.fadeOut = min(max(fadeOut, 0), end - self.trimStart)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, title, sourceDuration, trimStart, trimEnd, fadeIn, fadeOut
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            id: try values.decode(UUID.self, forKey: .id),
+            title: try values.decode(String.self, forKey: .title),
+            sourceDuration: try values.decode(TimeInterval.self, forKey: .sourceDuration),
+            trimStart: try values.decode(TimeInterval.self, forKey: .trimStart),
+            trimEnd: try values.decode(TimeInterval.self, forKey: .trimEnd),
+            fadeIn: try values.decodeIfPresent(TimeInterval.self, forKey: .fadeIn) ?? 0,
+            fadeOut: try values.decodeIfPresent(TimeInterval.self, forKey: .fadeOut) ?? 0
+        )
     }
 
     public var playableDuration: TimeInterval { trimEnd - trimStart }
