@@ -1,10 +1,10 @@
 import { effectiveOverlap, makeArrangement, makeClip, setTransition, type Arrangement } from '../core/arrangement'
 import { makeTransition } from '../core/crossfade'
-import { getEngine, queueIds, toPlayItem, trackById } from '../state'
+import { getEngine, playingArrangement, queueIds, toPlayItem, trackById } from '../state'
 import type { PlayItem } from '../audio/engine'
 
 /** Plays an arrangement through the shared engine with its per-transition crossfades. */
-export async function playArrangement(a: Arrangement, fromIndex = 0) {
+export async function playArrangement(a: Arrangement, fromIndex = 0, markAs: string | null = a.id) {
   const items: PlayItem[] = []
   const ids: string[] = []
   for (const c of a.clips) {
@@ -16,6 +16,7 @@ export async function playArrangement(a: Arrangement, fromIndex = 0) {
   if (!items.length) return
   const e = getEngine()
   queueIds.value = ids
+  playingArrangement.value = markAs
   e.repeat = 'off'
   e.setItems(items)
   e.transitionAfter = i => makeTransition(effectiveOverlap(a, i), a.transitions[i]?.curve ?? 'equalPower')
@@ -32,6 +33,6 @@ export async function previewTransition(a: Arrangement, i: number, context = 6) 
     makeClip({ ...y, trimEnd: Math.min(y.trimEnd, y.trimStart + ov + context), fadeOut: 0 }),
   ])
   const t = a.transitions[i]!
-  await playArrangement(setTransition(mini, 0, { duration: t.duration, curve: t.curve }), 0)
+  await playArrangement(setTransition(mini, 0, { duration: t.duration, curve: t.curve }), 0, null)
 }
 

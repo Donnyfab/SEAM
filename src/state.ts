@@ -18,6 +18,8 @@ export const engineState = signal<EngineState>({ status: 'idle', index: -1, dura
 export const queueIds = signal<string[]>([])
 export const shuffle = signal(false)
 export const toast = signal<string | null>(null)
+/** id of the arrangement currently being played from Studio, else null */
+export const playingArrangement = signal<string | null>(null)
 
 export const trackById = computed(() => new Map(tracks.value.map(t => [t.id, t])))
 
@@ -79,6 +81,7 @@ export async function playTracks(list: StoredTrack[], start = 0) {
     ids = q.items
   }
   queueIds.value = ids
+  playingArrangement.value = null
   e.transitionAfter = undefined
   e.crossfade = settings.value.crossfade
   e.repeat = settings.value.repeat

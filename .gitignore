@@ -9,3 +9,4 @@ DerivedData/
 .agent-runs/
 node_modules/
 dist/
+testdata/

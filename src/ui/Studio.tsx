@@ -4,7 +4,7 @@ import {
   appendClip, effectiveOverlap, formatTime, makeArrangement, makeClip, moveClip, playableDuration, removeClip, setTransition,
   timeline, totalDuration, tracklistText, updateClip, type Arrangement,
 } from '../core/arrangement'
-import { arrangements, decodeTrack, engineState, getEngine, notify, queueIds, setArrangements, trackById, tracks } from '../state'
+import { arrangements, decodeTrack, engineState, getEngine, notify, playingArrangement, setArrangements, trackById, tracks } from '../state'
 import { renderMix } from '../audio/render'
 import { analyzeTrack, type TrackAnalysis } from '../studio/analysis'
 import { playArrangement, previewTransition } from '../studio/playback'
@@ -148,13 +148,13 @@ export function Studio() {
     void saveBlob(new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' }), `${a.name} - arrangement.json`)
   }
 
-  const playingThis = es.status === 'playing' && queueIds.value.length === a.clips.length
+  const playingThis = es.status === 'playing' && playingArrangement.value === a.id
 
   return (
     <>
       <div class="large-title">Studio</div>
       <div class="actions">
-        <select aria-label="Arrangement" value={a.id} onChange={e => { currentId.value = (e.target as HTMLSelectElement).value; selected.value = 0 }} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '8px 10px', flex: 1, minWidth: 0 }}>
+        <select aria-label="Arrangement" value={a.id} onChange={e => { currentId.value = (e.target as HTMLSelectElement).value; selected.value = 0 }} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '8px 10px', width: '100%' }}>
           {list.map(x => <option value={x.id}>{x.name}</option>)}
         </select>
         <button class="btn small secondary" onClick={() => create()}>New</button>
@@ -178,7 +178,7 @@ export function Studio() {
                 <button class={`clipbox${i === sel ? ' sel' : ''}`} style={{ left: p.start * pps, width: Math.max((p.end - p.start) * pps, 6) }} onClick={() => { selected.value = i }}>{i + 1}. {p.clip.title}</button>
                 {p.overlapIn > 0 && <div class="ov" style={{ left: p.start * pps, width: p.overlapIn * pps }} />}
               </>))}
-            {es.status !== 'idle' && playingThis && <div class="playhead" style={{ left: playhead * pps }} />}
+            {playingThis && <div class="playhead" style={{ left: playhead * pps }} />}
           </div>
         </div>
       )}
