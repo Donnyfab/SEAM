@@ -28,14 +28,13 @@ export interface RemoteAdapter {
 export class ConnectError extends Error {}
 
 /** https pages cannot call plain-http servers (mixed content); catch it before the browser's vague "load failed". */
-export function checkReachable(url: string, pageProtocol = location.protocol, pageHost = location.hostname): void {
+export function checkReachable(url: string, pageProtocol = location.protocol): void {
   let u: URL
   try { u = new URL(url) } catch { throw new ConnectError('That address is not a valid URL (include https://)') }
   const local = ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname)
   if (pageProtocol === 'https:' && u.protocol === 'http:' && !local) {
     throw new ConnectError('Safari blocks http:// servers from an https app. Put your server behind https (for example a Tailscale/Caddy certificate) and use that address.')
   }
-  void pageHost
 }
 
 export function explainNetworkError(e: unknown): string {
