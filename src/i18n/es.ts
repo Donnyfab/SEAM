@@ -466,6 +466,8 @@ export const es: Record<string, string> = {
   "playingNextSongs_one": "Se reproducirá a continuación: {count} canción",
   "playingNextSongs_other": "Se reproducirán a continuación: {count} canciones",
   "queuedSongs_one": "Se añadió {count} canción a la cola",
-  "queuedSongs_other": "Se añadieron {count} canciones a la cola"
+  "queuedSongs_other": "Se añadieron {count} canciones a la cola",
+  "Share": "Compartir",
+  "More options for {title}": "Más opciones para {title}"
 }
 export default es

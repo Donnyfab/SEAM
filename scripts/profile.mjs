@@ -14,7 +14,7 @@ await cdp.send('Profiler.enable'); await cdp.send('Profiler.setSamplingInterval'
 if (what === 'songs') { await page.locator('.tabbar button').nth(1).click(); await page.waitForSelector('.large-title') }
 await cdp.send('Profiler.start')
 const t0 = Date.now()
-if (what === 'openPlaylist') { await page.locator('.pl-card button').first().click(); await page.waitForSelector('.detail-hero') }
+if (what === 'openPlaylist') { await page.locator('.pl-card button').first().click(); await page.waitForSelector('.pd-hero') }
 if (what === 'songs') { await page.locator('.row', { hasText: 'Songs' }).first().click(); await page.waitForSelector('.row .art') }
 if (what === 'library') { await page.locator('.tabbar button').nth(1).click(); await page.waitForSelector('.large-title') }
 await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))

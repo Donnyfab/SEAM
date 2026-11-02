@@ -31,8 +31,8 @@ await test('playlists screen shows seeded grid and count', async () => {
 })
 await test('create playlist via + menu dialog, persists across reload', async () => {
   await page.locator('.pl-nav .circle-btn').first().click(); await page.waitForSelector('.glass-menu'); await glass('New playlist')
-  await page.fill('.glass-dialog input', 'E2E List'); await page.locator('.glass-dialog button[type=submit]').click(); await page.waitForSelector('.detail-hero')
-  assert.equal(await page.locator('.detail-hero h2').innerText(), 'E2E List')
+  await page.fill('.glass-dialog input', 'E2E List'); await page.locator('.glass-dialog button[type=submit]').click(); await page.waitForSelector('.pd-hero')
+  assert.equal(await page.locator('.pd-title h1').innerText(), 'E2E List')
   await page.reload(); await page.waitForSelector('.pl-card'); assert.ok(await page.locator('.pl-card .name', { hasText: 'E2E List' }).count())
 })
 await test('delete playlist asks for confirmation, then offers Undo that restores it', async () => {
@@ -43,16 +43,16 @@ await test('delete playlist asks for confirmation, then offers Undo that restore
   assert.equal(await page.locator('.pl-card', { hasText: 'E2E List' }).count(), 1)
 })
 await test('open playlist, play all, mini player shows playing', async () => {
-  await page.locator('.pl-card', { hasText: 'Playlist 0' }).locator('button').first().evaluate(b => b.click()); await page.waitForSelector('.detail-hero')
-  await page.locator('.ctl-row button[aria-label="Play all"]').click()
+  await page.locator('.pl-card', { hasText: 'Playlist 0' }).locator('button').first().evaluate(b => b.click()); await page.waitForSelector('.pd-hero')
+  await page.locator('.pd-actions button[aria-label="Play all"]').click()
   await page.waitForFunction(() => [...document.querySelectorAll('.mini .ctl')].some(b => b.textContent.includes('❚❚')), null, { timeout: 10000 })
 })
 await test('play next while playing queues without error', async () => {
-  await page.locator('.ctl-row button[aria-label="Play next"]').click(); await page.waitForFunction(() => /Playing next|Added/.test(document.body.innerText), null, { timeout: 4000 }).catch(async () => { throw new Error('no toast; body: ' + (await page.locator('.toast').allInnerTexts()).join('|')) })
+  await page.locator('.pd-nav button[aria-label="More"]').click(); await page.waitForSelector('.glass-menu'); await glass('Play next'); await page.waitForFunction(() => /Playing next|Added/.test(document.body.innerText), null, { timeout: 4000 }).catch(async () => { throw new Error('no toast; body: ' + (await page.locator('.toast').allInnerTexts()).join('|')) })
 })
 await test('rearrange mode shows handles; back button exits to list', async () => {
-  await page.locator('.pl-nav .circle-btn').last().click(); await page.waitForSelector('.glass-menu'); await glass('Rearrange'); assert.ok((await page.locator('.handle').count()) > 5)
-  await page.locator('.pl-nav .circle-btn.on').click(); await page.locator('.pl-nav .circle-btn').first().click(); await page.waitForSelector('.pl-card')
+  await page.locator('.pd-nav button[aria-label="More"]').click(); await page.waitForSelector('.glass-menu'); await glass('Rearrange'); assert.ok((await page.locator('.handle').count()) > 5)
+  await page.locator('.pd-nav .pd-circle.on').click(); await page.locator('.pd-nav .pd-circle').first().click(); await page.waitForSelector('.pl-card')
 })
 await test('library songs list is virtualized (few DOM rows for 3000 songs) and searchable', async () => {
   await tab(1).click(); await page.waitForTimeout(300)
@@ -96,8 +96,8 @@ const inside = sel => page.evaluate(s => !!document.activeElement?.closest(s), s
 await tab(0).click(); await page.waitForSelector('.pl-card')
 await test('menu: tap outside closes it once, without activating what is underneath', async () => {
   await page.locator('.pl-nav .circle-btn').first().click(); await page.waitForSelector('.glass-menu')
-  await page.mouse.click(300, 760); await page.waitForTimeout(150)
-  assert.equal(await page.locator('.glass-menu').count(), 0); assert.equal(await page.locator('.glass-dialog, .detail-hero').count(), 0)
+  await page.mouse.click(300, 600); await page.waitForTimeout(150)
+  assert.equal(await page.locator('.glass-menu').count(), 0); assert.equal(await page.locator('.glass-dialog, .pd-hero').count(), 0)
 })
 await test('menu: Escape closes and focus returns to the trigger; arrow keys move between items', async () => {
   const trigger = page.locator('.pl-nav .circle-btn').first()
@@ -123,8 +123,8 @@ await test('dialog: Tab stays inside, Enter submits once, Escape cancels, typed 
   assert.equal(await page.locator('.glass-dialog').count(), 1, 'backdrop tap discarded typed text')
   await page.keyboard.press('Escape'); await page.waitForTimeout(120); assert.equal(await page.locator('.glass-dialog').count(), 0)
   await page.locator('.pl-nav .circle-btn').first().click(); await page.waitForSelector('.glass-menu'); await glass('New playlist')
-  await page.fill('.glass-dialog input', 'Enter Once'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter'); await page.waitForSelector('.detail-hero')
-  await page.locator('.pl-nav .circle-btn').first().click(); await page.waitForSelector('.pl-card')
+  await page.fill('.glass-dialog input', 'Enter Once'); await page.keyboard.press('Enter'); await page.keyboard.press('Enter'); await page.waitForSelector('.pd-hero')
+  await page.locator('.pd-nav .pd-circle').first().click(); await page.waitForSelector('.pl-card')
   assert.equal(await page.locator('.pl-card .name', { hasText: 'Enter Once' }).count(), 1, 'duplicate playlist created')
 })
 await test('confirm dialog: danger confirm focuses Cancel; Escape cancels without deleting', async () => {
@@ -143,12 +143,12 @@ await test('action sheet: Escape closes, backdrop tap closes, focus restored', a
   assert.equal(await page.locator('.glass-sheet').count(), 0)
 })
 await test('Now Playing: Escape closes only the sheet and focus returns to the mini player', async () => {
-  await page.locator('.pl-card', { hasText: 'Playlist 0' }).locator('button').first().evaluate(b => b.click()); await page.waitForSelector('.detail-hero')
-  await page.locator('.ctl-row button[aria-label="Play all"]').click(); await page.waitForSelector('.mini')
+  await page.locator('.pl-card', { hasText: 'Playlist 0' }).locator('button').first().evaluate(b => b.click()); await page.waitForSelector('.pd-hero')
+  await page.locator('.pd-actions button[aria-label="Play all"]').click(); await page.waitForSelector('.mini')
   await page.locator('.mini').first().focus().catch(() => {}); await page.locator('.mini .grow, .mini .info, .mini').first().click(); await page.waitForSelector('.sheet')
   assert.ok(await inside('.sheet'))
   await page.keyboard.press('Escape'); await page.waitForTimeout(250); assert.equal(await page.locator('.sheet').count(), 0)
-  assert.ok(await page.locator('.detail-hero').count(), 'underlying screen was reset')
+  assert.ok(await page.locator('.pd-hero').count(), 'underlying screen was reset')
 })
 await test('no uncaught page errors', async () => { assert.deepEqual(errors, []) })
 

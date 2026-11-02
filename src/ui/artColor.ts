@@ -34,16 +34,6 @@ export async function artPalette(artId: string | undefined): Promise<Palette> {
   return url ? sample(url) : NEUTRAL
 }
 
-/** A playlist's palette comes from its custom cover, else the first song that has artwork. */
-export async function playlistPalette(p: { id: string; customArt?: boolean; trackIds: string[] }): Promise<Palette> {
-  if (p.customArt) return artPalette(`pl:${p.id}`)
-  for (const id of p.trackIds.slice(0, 6)) {
-    const url = await artworkUrl(id, 'sm')
-    if (url) return sample(url)
-  }
-  return NEUTRAL
-}
-
 // ---- who owns the backdrop right now: the newest mounted glass screen wins; leaving it hands the colours back ----
 interface Entry { id: symbol; pal: Palette }
 const stack: Entry[] = []

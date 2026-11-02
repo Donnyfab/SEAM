@@ -9,8 +9,6 @@ import type { Playlist, StoredTrack } from '../library/store'
 import { exportM3U, exportSeamJson, matchEntries, moveItem, parsePlaylistFile, playlistDuration, searchPlaylists, sortPlaylists } from '../library/playlistIO'
 import { searchTracks, sortTracks } from '../library/model'
 import { Art, fmt, saveBlob, useDebounced, useEdgeSwipeBack, useInView, useSheet } from './common'
-import { useGlow, playlistPalette } from './artColor'
-import { NEUTRAL } from '../core/palette'
 import { askConfirm, askText, GlassMenu, GlassSheet, type GlassItem } from './Glass'
 import { Icon } from './Icon'
 import { EditTrack } from './Edit'
@@ -34,7 +32,7 @@ function durationLabel(sec: number): string {
 const listOf = (p: Playlist): StoredTrack[] => p.trackIds.map(i => trackById.value.get(i)).filter((x): x is StoredTrack => !!x)
 const durationOf = (p: Playlist) => playlistDuration(p, trackById.value)
 
-function Cover({ p, size, big }: { p: Playlist; size?: number; big?: boolean }) {
+function Cover({ p, size }: { p: Playlist; size?: number }) {
   const [host, seen] = useInView<HTMLDivElement>()
   const [urls, setUrls] = useState<{ custom: string | null; arts: string[] }>({ custom: null, arts: [] })
   const key = `${p.id}|${p.customArt ? 1 : 0}|${p.trackIds.slice(0, 8).join(',')}`
@@ -42,10 +40,10 @@ function Cover({ p, size, big }: { p: Playlist; size?: number; big?: boolean }) 
     if (!seen) return
     let live = true
     void (async () => {
-      const custom = p.customArt ? await artworkUrl(`pl:${p.id}`, big ? 'full' : 'sm') : null
+      const custom = p.customArt ? await artworkUrl(`pl:${p.id}`, 'sm') : null
       const arts: string[] = []
       if (!custom) for (const id of p.trackIds.slice(0, 8)) { // stop as soon as a 2x2 collage is possible
-        const u = await artworkUrl(id, big && !arts.length ? 'full' : 'sm')
+        const u = await artworkUrl(id, 'sm')
         if (u && !arts.includes(u)) arts.push(u)
         if (arts.length >= 4 || !live) break
       }
@@ -60,6 +58,32 @@ function Cover({ p, size, big }: { p: Playlist; size?: number; big?: boolean }) 
   if (arts[0]) return <div ref={host} class="cover img" style={{ ...style, backgroundImage: `url(${arts[0]})` }} />
   return <div ref={host} class="cover" style={style}>♪</div>
 }
+
+/** Full-size cover for the detail hero: the custom image, else the first song that has artwork. */
+function useHeroCover(p: Playlist | undefined): string | null {
+  const [url, setUrl] = useState<string | null>(null)
+  const key = p ? `${p.id}|${p.customArt ? 1 : 0}|${p.trackIds.slice(0, 8).join(',')}` : ''
+  useEffect(() => {
+    if (!p) return
+    let live = true
+    void (async () => {
+      let found: string | null = p.customArt ? await artworkUrl(`pl:${p.id}`, 'full') : null
+      if (!found) for (const id of p.trackIds.slice(0, 8)) { found = await artworkUrl(id, 'full'); if (found || !live) break }
+      if (live) setUrl(found)
+    })()
+    return () => { live = false }
+  }, [key])
+  return url
+}
+
+function Thumb({ id }: { id: string }) {
+  const [host, seen] = useInView<HTMLSpanElement>()
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => { if (!seen) return; let live = true; void artworkUrl(id, 'sm').then(u => live && setUrl(u)); return () => { live = false } }, [id, seen])
+  return <span ref={host} class="pd-thumb">{url ? <img src={url} alt="" /> : <Icon name="music" size={22} />}</span>
+}
+
+const summaryOf = (count: number, sec: number) => `${translate('songCount', { count })}, ${translate('minutesCount', { count: Math.round(sec / 60) })}`
 
 function TrackPicker({ title, onDone, onClose }: { title: string; onDone: (ids: string[]) => void; onClose: () => void }) {
   const { ref } = useSheet(onClose)
@@ -270,6 +294,8 @@ function PlaylistDetail({ id }: { id: string }) {
   const [adding, setAdding] = useState(false)
   const [rowSheet, setRowSheet] = useState<StoredTrack | null>(null)
   const [edit, setEdit] = useState<string | null>(null)
+  const [share, setShare] = useState(false)
+  const cover = useHeroCover(p)
   const cur = queueIds.value[engineState.value.index]
 
   const all = p ? listOf(p) : []
@@ -281,7 +307,7 @@ function PlaylistDetail({ id }: { id: string }) {
   const manual = sort === 'manual' && !q
   const sortable = useSortable({ count: shown.length, handleSelector: '.handle', onMove: (from, to) => { if (p && manual) void updatePlaylist(p.id, { trackIds: moveItem(p.trackIds, from, to) }) } })
   useEffect(() => { if (!rearrange) return; setSort('manual'); setQ(''); setSearching(false) }, [rearrange])
-  useGlow(() => (p ? playlistPalette(p) : Promise.resolve(NEUTRAL)), p ? `${p.id}|${p.customArt ? 1 : 0}|${p.trackIds.slice(0, 6).join(',')}` : '')
+  useEffect(() => { const r = document.documentElement; r.classList.add('pd-on'); return () => r.classList.remove('pd-on') }, [])
   if (!p) return <div class="empty">{translate('Playlist deleted.')}</div>
 
   const pick = (x: StoredTrack) => setSel(s => (s.includes(x.id) ? s.filter(y => y !== x.id) : [...s, x.id]))
@@ -321,45 +347,52 @@ function PlaylistDetail({ id }: { id: string }) {
     const playHere = () => (selecting ? pick(x) : void playTracks(shown, i))
     const props = rearrange && manual ? sortable.itemProps(i) : {}
     return (
-      <div key={x.id} {...(props as object)} class={`song-row${cur === x.id ? ' active' : ''}${sortable.draggingIndex === i && rearrange ? ' dragging' : ''}`}>
+      <div key={x.id} {...(props as object)} class={`song-row${selecting ? ' selecting' : ''}${cur === x.id ? ' active' : ''}${sortable.draggingIndex === i && rearrange ? ' dragging' : ''}`}>
         {selecting && <span class={`sel-circle${on ? ' on' : ''}`}><Icon name={on ? 'checkCircle' : 'circle'} /></span>}
-        <button class="main" style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }} onClick={playHere}>
-          <Art id={x.id} />
-          <span style={{ minWidth: 0 }}><div class="st">{x.title}</div><div class="ss">{fmt(x.duration)}</div></span>
+        <button class="main" onClick={playHere}>
+          <Thumb id={x.id} />
+          <span class="pd-text"><span class="st">{x.title}</span><span class="ss">{fmt(x.duration)}</span></span>
         </button>
         {rearrange && manual ? <span class="handle" aria-label={translate('Reorder {title}', { title: x.title })} role="button" tabIndex={0}><Icon name="list" /></span>
-          : !selecting && <button class="more" aria-label={translate('More')} onClick={() => setRowSheet(x)}><Icon name="dots" size={20} /></button>}
+          : !selecting && <button class="more" aria-label={translate('More options for {title}', { title: x.title })} onClick={() => setRowSheet(x)}><Icon name="dots" size={20} /></button>}
       </div>
     )
   }
+  const mode = rearrange ? translate('Rearrange songs') : selecting ? translate('{count} selected', { count: sel.length }) : ''
   return (
-    <div class="glass-page">
-      <div class="pl-nav">
-        <button class="circle-btn" aria-label={translate('Back')} onClick={() => { if (rearrange) setRearrange(false); else if (selecting) exitSelect(); else back() }}><Icon name="chevL" /></button>
-        <h1>{rearrange ? translate('Rearrange songs') : selecting ? translate('{count} selected', { count: sel.length }) : p.name}</h1>
-        {rearrange ? <button class="circle-btn on" aria-label={translate('Done')} onClick={() => setRearrange(false)}><Icon name="check" /></button>
-          : selecting ? <button class="circle-btn" aria-label={translate('Select all')} onClick={() => setSel(sel.length === all.length ? [] : all.map(x => x.id))}><Icon name="checkCircle" /></button>
-          : <button class="circle-btn" aria-label={translate('More')} onClick={() => setMenu(true)}><Icon name="dots" /></button>}
+    <div class="pd">
+      <div class="pd-nav">
+        <div class="pd-nav-inner">
+          <button class="pd-glass pd-circle" aria-label={translate('Back')} onClick={() => { if (rearrange) setRearrange(false); else if (selecting) exitSelect(); else back() }}><Icon name="chevL" size={24} /></button>
+          {mode && <span class="pd-glass pd-mode">{mode}</span>}
+          {rearrange ? <button class="pd-glass pd-circle on" aria-label={translate('Done')} onClick={() => setRearrange(false)}><Icon name="check" /></button>
+            : selecting ? <button class="pd-glass pd-circle" aria-label={translate('Select all')} onClick={() => setSel(sel.length === all.length ? [] : all.map(x => x.id))}><Icon name="checkCircle" /></button>
+            : <div class="pd-glass pd-pill">
+              <button aria-label={translate('Share')} onClick={() => setShare(true)}><Icon name="export" /></button>
+              <button aria-label={translate('More')} onClick={() => setMenu(true)}><Icon name="dots" /></button>
+            </div>}
+        </div>
       </div>
-      <div class="detail-hero">
-        <Cover p={p} big />
-        <h2>{p.name}</h2><div class="dur">{durationLabel(durationOf(p))}</div>
-      </div>
-      <div class="ctl-row">
-        <button aria-label={translate('Search')} onClick={() => setSearching(s => !s)}><Icon name="search" /></button>
-        <button aria-label={translate('Play next')} disabled={!all.length} onClick={() => void enqueue(all, 'next')}><Icon name="playNext" /></button>
-        <button aria-label={translate('Play all')} disabled={!all.length} onClick={() => playAll(shown)}><Icon name="play" fill /></button>
-        <button aria-label={translate('Shuffle')} disabled={!all.length} onClick={() => playShuffled(shown)}><Icon name="shuffle" /></button>
+      <header class="pd-hero">
+        {cover ? <img class="pd-hero-img" src={cover} alt="" /> : <div class="pd-hero-fallback" />}
+        <div class="pd-hero-fade" aria-hidden="true" />
+      </header>
+      <div class="pd-title"><h1>{p.name}</h1><div class="pd-kind">{translate('Playlist')}</div></div>
+      <div class="pd-actions">
+        <button class="pd-round" aria-label={translate('Shuffle')} disabled={!all.length} onClick={() => playShuffled(shown)}><Icon name="shuffle" size={21} /></button>
+        <button class="pd-play" aria-label={translate('Play all')} disabled={!all.length} onClick={() => playAll(shown)}><Icon name="play" size={17} fill />{translate('Play')}</button>
+        <button class="pd-round" aria-label={translate('Search this playlist')} aria-pressed={searching} onClick={() => setSearching(s => !s)}><Icon name="search" size={21} /></button>
       </div>
       {searching && <div class="pl-search"><Icon name="search" size={18} /><input autofocus type="search" enterkeyhint="search" onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setSearching(false); setQ('') } else if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} placeholder={translate('Search this playlist')} value={q} onInput={e => setQ((e.target as HTMLInputElement).value)} /><button aria-label={translate('Cancel')} onClick={() => { setSearching(false); setQ('') }}>✕</button></div>}
       {sort !== 'manual' && <div class="hint" style={{ margin: '0 16px 8px' }}>{translate('Sorted view — choose Sort › Playlist order to rearrange.')}</div>}
       {!all.length && <div class="empty">{translate('This playlist is empty.')}<div style={{ marginTop: 16 }}><button class="btn" onClick={() => setAdding(true)}>{translate('Add songs')}</button></div></div>}
-      {grid ? <div class="pl-grid glass-list">{shown.map((x, i) => (
+      {grid ? <div class="pd-list pl-grid">{shown.map((x, i) => (
         <div class="pl-card"><button style={{ display: 'block', width: '100%' }} onClick={() => (selecting ? pick(x) : void playTracks(shown, i))}><div class="cover img" style={{}}><Art id={x.id} big /></div></button>
           {selecting && <span class={`sel-badge${sel.includes(x.id) ? ' on' : ''}`}><Icon name={sel.includes(x.id) ? 'check' : 'circle'} size={18} /></span>}
           <div class="name">{x.title}</div><div class="sub">{x.artist}</div></div>))}</div>
-        : <div class="glass-list" {...((rearrange && manual ? sortable.containerProps : {}) as object)}>{shown.map(rowFor)}</div>}
+        : <div class="pd-list" {...((rearrange && manual ? sortable.containerProps : {}) as object)}>{shown.map(rowFor)}</div>}
       {q && !shown.length && <div class="empty">{translate('No matches')}</div>}
+      {all.length > 0 && <p class="pd-summary">{summaryOf(all.length, durationOf(p))}</p>}
 
       {selecting && (
         <div class="action-bar" role="toolbar">
@@ -370,6 +403,7 @@ function PlaylistDetail({ id }: { id: string }) {
         </div>)}
 
       {menu && <GlassMenu items={items} anchor="right" onClose={() => setMenu(false)} />}
+      {share && <GlassMenu items={exportItems(p)} anchor="right" onClose={() => setShare(false)} />}
       {rowSheet && <GlassSheet title={rowSheet.title} subtitle={rowSheet.artist} items={songItems(rowSheet)} onClose={() => setRowSheet(null)} />}
       {adding && <TrackPicker title={translate('Add songs')} onDone={ids => { void updatePlaylist(p.id, { trackIds: [...p.trackIds, ...ids.filter(i => !p.trackIds.includes(i))] }); notify(translate('addedSongs', { count: ids.length })) }} onClose={() => setAdding(false)} />}
       {edit && <EditTrack id={edit} onClose={() => setEdit(null)} />}

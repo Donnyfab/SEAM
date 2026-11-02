@@ -20,3 +20,9 @@
 
 ## Update: performance/UX overhaul
 - See docs/PERFORMANCE.md. New: VirtualList, dsp worker (src/workers, src/audio/dspClient.ts), resilientFetch, lazy screens (src/ui/lazy.tsx), undo toasts (state.notifyUndo), art thumbnails (artworkUrl sm/full), useSheet/useFrame/useClock hooks in ui/common.tsx. Run e2e/bench against `SEAM_BASE=/SEAM/ npx vite preview`.
+
+## Update: Apple Music-style playlist detail + floating tab bar (2026-11-02)
+- Playlist detail (`PlaylistDetail` in `src/ui/Playlists.tsx`) now has a full-bleed hero, glass nav (back; share = export menu; more = existing menu), shuffle / Play / search row, 64px rows with thumbnails and a "N songs, M minutes" footer. Styles are `pd-*` (and `.song-row`) at the end of `styles.css`; the detail sets `--bg: #0a0d12` via `html.pd-on` while mounted.
+- The existing bottom tab bar is now the floating glass pill (accent #ff375f, `--tab-h` is 88px so the mini player/action bar sit above it) with a `.tab-fade` gradient.
+- Removed: artwork-reactive glass on the detail (`glass-page`, `detail-hero`, `playlistPalette`, `Cover big`); the detail's Play-next button (still in the More menu). Now Playing still uses `useGlow`.
+- e2e/a11y/bench/shots scripts updated to the new selectors; e2e 21/21.

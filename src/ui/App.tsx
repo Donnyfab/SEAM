@@ -85,6 +85,7 @@ export function App() {
         </Boundary>
       </main>
       {hasTrack && (bookActive ? <MiniBook onOpen={() => setOpen(true)} /> : <MiniPlayer onOpen={() => setOpen(true)} />)}
+      <div class="tab-fade" aria-hidden="true" />
       <nav class="tabbar" aria-label={translate("Main")}>
         {TABS.map(t => (
           <button class={tab === t ? 'on' : ''} onClick={() => setTab(t)} onPointerEnter={() => { if (t === 'library') void Library.preload().catch(() => {}); if (t === 'studio') void Studio.preload().catch(() => {}); if (t === 'connect') void Connect.preload().catch(() => {}); if (t === 'settings') void Settings.preload().catch(() => {}) }} aria-label={translate(labels[t])} aria-current={tab === t ? 'page' : undefined}>

@@ -466,6 +466,8 @@ export const en: Record<string, string> = {
   "playingNextSongs_one": "Playing next: {count} song",
   "playingNextSongs_other": "Playing next: {count} songs",
   "queuedSongs_one": "Added {count} song to the queue",
-  "queuedSongs_other": "Added {count} songs to the queue"
+  "queuedSongs_other": "Added {count} songs to the queue",
+  "Share": "Share",
+  "More options for {title}": "More options for {title}"
 }
 export default en

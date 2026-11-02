@@ -17,9 +17,9 @@ await p.evaluate(async () => {
 })
 await p.goto(url); await p.waitForSelector('.pl-card'); await p.waitForTimeout(800)
 await p.screenshot({ path: `${out}/1-playlists.png` })
-const open = async n => { await p.locator('.pl-card', { hasText: 'Playlist ' + n }).locator('button').first().evaluate(b => b.click()); await p.waitForSelector('.detail-hero'); await p.waitForTimeout(1600) }
+const open = async n => { await p.locator('.pl-card', { hasText: 'Playlist ' + n }).locator('button').first().evaluate(b => b.click()); await p.waitForSelector('.pd-hero'); await p.waitForTimeout(1600) }
 await open(0); await p.screenshot({ path: `${out}/2-detail-blue.png` })
-await p.locator('.pl-nav .circle-btn').first().click(); await p.waitForSelector('.pl-card'); await open(1); await p.screenshot({ path: `${out}/3-detail-red.png` })
-await p.locator('.ctl-row button[aria-label="Play all"]').click(); await p.waitForSelector('.mini'); await p.waitForTimeout(600)
+await p.locator('.pd-nav .pd-circle').first().click(); await p.waitForSelector('.pl-card'); await open(1); await p.screenshot({ path: `${out}/3-detail-red.png` })
+await p.locator('.pd-actions button[aria-label="Play all"]').click(); await p.waitForSelector('.mini'); await p.waitForTimeout(600)
 await p.locator('.mini .mini-main').click(); await p.waitForSelector('.sheet.np'); await p.waitForTimeout(1500); await p.screenshot({ path: `${out}/4-now-playing.png` })
 await b.close()

@@ -67,7 +67,7 @@ await page.waitForTimeout(400)
 // ---- tab switching / playlists grid ----
 await timed('toPlaylists', () => tab(0).click(), '.pl-card')
 out.playlistsDom = await page.evaluate(() => document.querySelectorAll('*').length)
-await timed('openPlaylist', () => page.evaluate(() => document.querySelector('.pl-card button').click()), '.detail-hero') // direct click: Playwright's click would wait out the card entrance animation
+await timed('openPlaylist', () => page.evaluate(() => document.querySelector('.pl-card button').click()), '.pd-hero') // direct click: Playwright's click would wait out the card entrance animation
 await timed('toSettings', () => tab(4).click(), '.large-title')
 
 // ---- playback: tap-to-sound latency and render cost while the Now Playing sheet is open ----

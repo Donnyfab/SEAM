@@ -41,9 +41,9 @@ for (const scheme of ['dark', 'light']) {
     for (const x of r) issues.push(`[${scheme}] ${label}: ${x}`)
   }
   await audit('Playlists')
-  await page.evaluate(() => document.querySelector('.pl-card button').click()); await page.waitForSelector('.detail-hero'); await page.waitForTimeout(400); await audit('Playlist detail')
-  await page.locator('.pl-nav .circle-btn').last().click(); await page.waitForSelector('.glass-menu'); await page.waitForTimeout(450); await audit('Playlist menu'); await page.keyboard.press('Escape')
-  await page.evaluate(() => document.querySelector('.pl-nav .circle-btn').click())
+  await page.evaluate(() => document.querySelector('.pl-card button').click()); await page.waitForSelector('.pd-hero'); await page.waitForTimeout(400); await audit('Playlist detail')
+  await page.locator('.pd-nav button[aria-label="More"]').click(); await page.waitForSelector('.glass-menu'); await page.waitForTimeout(450); await audit('Playlist menu'); await page.keyboard.press('Escape')
+  await page.evaluate(() => document.querySelector('.pd-nav .pd-circle').click())
   for (const [i, n] of [[1, 'Library'], [2, 'Studio'], [3, 'Connect'], [4, 'Settings']]) { await page.locator('.tabbar button').nth(i).click(); await page.waitForTimeout(700); await audit(n) }
   await ctx.close()
 }
