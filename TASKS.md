@@ -4,7 +4,7 @@ Status: todo | doing | review | done. Owner: claude | codex. Paths = the only fi
 | ID | Task | Owner | Status | Paths |
 |----|------|-------|--------|-------|
 | T001 | Repo, SEAMCore: Crossfade, Arrangement, PlayQueue + tests | claude | done | Sources/SEAMCore, Tests |
-| T002 | Codex smoke test via `scripts/codex-delegate.sh` (add `Clip.fadeIn/fadeOut` edge fades + tests) | codex | todo | Sources/SEAMCore/Arrangement.swift, Tests |
+| T002 | Codex smoke test via `scripts/codex-delegate.sh` (add `Clip.fadeIn/fadeOut` edge fades + tests) | codex | done | Sources/SEAMCore/Arrangement.swift, Tests |
 | T003 | Library model: Track, Album/Artist grouping, search/sort, Codable persistence + tests | codex | todo | Sources/SEAMCore/Library |
 | T004 | Metadata reader (AVAsset: title/artist/album/artwork/duration) | claude | blocked: Xcode for iOS target | App/ |
 | T005 | Audio engine: AVAudioEngine two-player crossfade + gapless scheduling | claude | blocked: Xcode | App/Audio |
