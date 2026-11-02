@@ -7,3 +7,5 @@ DerivedData/
 *.p12
 *.mobileprovision
 .agent-runs/
+node_modules/
+dist/

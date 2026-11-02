@@ -1,13 +1,13 @@
 # SEAM — shared agent instructions (Claude + Codex)
 
-SEAM is a personal, free, native iOS music player (Swift/SwiftUI/AVAudioEngine) with an "EP Transition Studio".
+SEAM is a personal, free music player + "EP Transition Studio" built as an iOS-installable PWA (TypeScript, Vite, Preact, Web Audio). The old Swift prototype is in legacy/ (reference only).
 Read HANDOFF.md first, then only the task you were assigned in TASKS.md. Do not re-read the whole repo.
 
 ## Rules
 - One task = one branch/worktree (`claude/<task-id>` or `codex/<task-id>`). Never edit files outside your task's listed paths.
-- Pure logic goes in `Sources/SEAMCore` (no UIKit/SwiftUI, testable with `swift test`). Audio/UI go in the app target.
-- Every change ships with tests. Run `scripts/test-clt.sh` (no Xcode) or `swift test` (Xcode) before handing back.
-- Swift 6 strict concurrency. No force-unwraps in production code. No third-party deps without owner approval.
-- Never write secrets/API keys to the repo. Never run destructive git/file commands without owner approval.
+- Pure logic (no DOM) goes in `src/core`, `src/library`, `src/audio/*.ts` pure functions; testable with Vitest in node. DOM/UI code lives in `src/ui`.
+- Every change ships with tests. Run `npm test` and `npm run typecheck` before handing back.
+- TypeScript strict. No `any`. Pure functions over typed arrays; no hidden globals. No third-party deps without owner approval.
+- Do not add npm dependencies. Never write secrets/API keys to the repo. Never run destructive git/file commands without owner approval.
 - No placeholder buttons: a feature is either working and tested, or absent and listed in ROADMAP.md as not done.
 - When finished: update TASKS.md status, append to HANDOFF.md "Done", commit on your branch. Claude merges.
