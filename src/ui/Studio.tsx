@@ -12,6 +12,7 @@ import { playArrangement, previewTransition } from '../studio/playback'
 import { Art, fmt, saveBlob } from './common'
 
 const currentId = signal<string | null>(null)
+const exportDepth = signal<16 | 24 | 32>(16)
 const selected = signal(0)
 const fx = (n: number, d = 2) => n.toFixed(d)
 
@@ -127,7 +128,7 @@ export function Studio() {
     setBusy(translate("Rendering 0%"))
     try {
       const ctx = getEngine().ctx
-      const blob = await renderMix(a, id => decodeTrackUncached(id, ctx), { sampleRate: ctx.sampleRate, bitDepth: 16, onProgress: (d, t) => setBusy(translate("Rendering {value}%", { value: Math.round((d / t) * 100) })) })
+      const blob = await renderMix(a, id => decodeTrackUncached(id, ctx), { sampleRate: ctx.sampleRate, bitDepth: exportDepth.value, onProgress: (d, t) => setBusy(translate("Rendering {value}%", { value: Math.round((d / t) * 100) })) })
       await saveBlob(blob, translate('{name} - preview mix.wav', { name: a.name }))
       notify(translate("Mix ready ({value} MB)", { value: (blob.size / 1e6).toFixed(0) }))
     } catch (e) { notify(translate("Render failed: {value}", { value: e instanceof Error ? e.message : String(e) })) }
@@ -171,7 +172,7 @@ export function Studio() {
           <div class="lane" style={{ width: Math.max(total * pps, 10) }}>
             {tl.map((p, i) => (
               <>
-                <button class={`clipbox${i === sel ? ' sel' : ''}`} style={{ left: p.start * pps, width: Math.max((p.end - p.start) * pps, 6) }} onClick={() => { selected.value = i }}>{i + 1}. {p.clip.title}</button>
+                <button class={`clipbox${i === sel ? ' sel' : ''}`} style={{ left: p.start * pps, width: Math.max((p.end - p.start) * pps, 6) }} onClick={() => { selected.value = i }}>{!p.clip.trackId || !trackById.value.has(p.clip.trackId) ? '⚠ ' : ''}{i + 1}. {p.clip.title}</button>
                 {p.overlapIn > 0 && <div class="ov" style={{ left: p.start * pps, width: p.overlapIn * pps }} />}
               </>))}
             {playingThis && <div class="playhead" style={{ left: playhead * pps }} />}
@@ -182,7 +183,7 @@ export function Studio() {
       {selClip && (
         <div class="group" style={{ padding: 14 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-            <strong style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sel + 1}. {selClip.title}</strong>
+            <strong style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sel + 1}. {selClip.title}{!selClip.trackId || !trackById.value.has(selClip.trackId) ? <span style={{ color: 'var(--danger)', fontWeight: 400, fontSize: 13 }}> · {translate("Song deleted from library")}</span> : null}</strong>
             <button class="btn small secondary" disabled={sel === 0} onClick={() => { commit(moveClip(a, sel, sel - 1)); selected.value = sel - 1 }} aria-label={translate("Move earlier")}>↑</button>
             <button class="btn small secondary" disabled={sel >= a.clips.length - 1} onClick={() => { commit(moveClip(a, sel, sel + 1)); selected.value = sel + 1 }} aria-label={translate("Move later")}>↓</button>
             <button class="btn small danger" onClick={() => { commit(removeClip(a, sel)); selected.value = Math.max(0, sel - 1) }} aria-label={translate("Remove")}>✕</button>
@@ -216,7 +217,8 @@ export function Studio() {
       ))}
 
       <div class="group">
-        <button class="row" disabled={!!busy || !a.clips.length} onClick={exportMix}><span class="icon" style={{ background: '#30d158' }}>⤓</span><div class="grow"><div class="t">{busy ?? translate("Export continuous mix (WAV)")}</div><div class="s">{translate("16-bit, rendered offline with exact timing")}</div></div></button>
+        <label class="field"><span>{translate("Export quality")}</span><select value={exportDepth.value} onChange={e => { exportDepth.value = Number((e.target as HTMLSelectElement).value) as 16 | 24 | 32 }} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '6px 8px' }}><option value={16}>{translate("16-bit (smallest)")}</option><option value={24}>{translate("24-bit (studio)")}</option><option value={32}>{translate("32-bit float (lossless)")}</option></select></label>
+        <button class="row" disabled={!!busy || !a.clips.length} onClick={exportMix}><span class="icon" style={{ background: '#30d158' }}>⤓</span><div class="grow"><div class="t">{busy ?? translate("Export continuous mix (WAV)")}</div><div class="s">{translate("{bits}-bit, rendered offline with exact timing", { bits: exportDepth.value })}</div></div></button>
         <button class="row" disabled={!a.clips.length} onClick={exportInfo}><span class="icon" style={{ background: '#5e5ce6' }}>☰</span><div class="grow"><div class="t">{translate("Export tracklist (text)")}</div><div class="s">{translate("Start times and transition settings")}</div></div></button>
         <button class="row" disabled={!a.clips.length} onClick={exportJson}><span class="icon" style={{ background: '#ff9f0a' }}>{'{}'}</span><div class="grow"><div class="t">{translate("Export arrangement (JSON)")}</div></div></button>
       </div>

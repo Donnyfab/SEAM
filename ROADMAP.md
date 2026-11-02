@@ -12,11 +12,11 @@
 - ✅ Import from Files/iCloud Drive/USB via the iOS file picker (copies into app storage) · ❌ linking a folder in place
 - ✅ Songs, albums, artists, genres, favorites, recents, unplayed, search, sort · ✅ playlists (create, rename, reorder, delete)
 - ✅ Tags, artwork, lyrics, comments read · ✅ edit info/artwork/lyrics (stored in SEAM; original file untouched) · ✅ bookmarks · ✅ audiobooks (.m4b, >1 h, or set manually): streaming player, skip, 0.5–3× speed, sleep timer, resume · ✅ export a copy with tags written (MP3, FLAC, M4A) · ✅ M4A tag writing
-- ✅ Backup/restore (.seambak with audio + artwork; keep/replace) · ✅ passcode (PBKDF2 + lockout; a convenience lock, not encryption) · ✅ text size, reduce motion, high contrast, labelled controls · 🟡 localization en/es/fr/de (T050 in progress)
+- ✅ Backup/restore (.seambak with audio + artwork; keep/replace) · ✅ passcode (PBKDF2 + lockout; a convenience lock, not encryption) · ✅ text size, reduce motion, high contrast, labelled controls · ✅ localization en/es/fr/de (machine-translated; native review welcome)
 ## EP Transition Studio (priority)
 - ✅ Arrangements (multiple, duplicate, compare), ✅ per-transition crossfade + curve, ✅ non-destructive trims + fades, ✅ waveform + drag handles, ✅ suggested start/end points, ✅ preview a join, ✅ play whole sequence
 - ✅ Export continuous WAV mix (16-bit, frame-accurate, memory-bounded) · ✅ tracklist (.txt) + arrangement JSON
-- ⬜ 24-bit/32f export option in UI, ⬜ M4A export (MediaRecorder/WebCodecs), ⬜ A/B level-matched compare, ⬜ Ableton: import WAV/AIFF/FLAC/MP3 bounces (works now); `.als` project import ❌
+- ⬜ M4A export (MediaRecorder/WebCodecs), ⬜ A/B level-matched compare, ⬜ Ableton: import WAV/AIFF/FLAC/MP3 bounces (works now); `.als` project import ❌
 ## Cloud & network
 - ✅ Connect tab: WebDAV (verified end-to-end vs a local server), Subsonic/Navidrome, Jellyfin, internet radio (+ .m3u/.pls import); browse, search, stream, ⤓ download for offline · 🟡🔑 Dropbox / Google Drive / OneDrive: OAuth PKCE built and mock-tested; needs your own free app registrations, not yet tried against the real services · ⚠ servers need https:// + CORS · ❌ live radio song titles (ICY metadata unreadable from browsers)
 - ❌ SMB, SFTP, FTP, DLNA/UPnP (no raw sockets in browsers) → use WebDAV/Subsonic gateways on your NAS · ❌ Wi-Fi Drive server on the phone → use Files import

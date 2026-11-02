@@ -24,5 +24,5 @@
 | T036 | Audiobooks, bookmarks, resume, editor, visualizer | claude | done |
 | T031 | Connect tab + cloud OAuth wiring | claude | done |
 | T033 | Backup/restore, passcode, Last.fm, accessibility | claude | done |
-| T050 | Localization (en/es/fr/de) | codex | doing |
-| T051 | Studio: flag deleted clips; 24-bit export option; M4A tag writing | claude/codex | todo |
+| T050 | Localization (en/es/fr/de) | codex | done |
+| T051 | Studio: flag deleted clips; 24-bit export option; M4A tag writing | claude/codex | done |

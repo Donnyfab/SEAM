@@ -370,6 +370,12 @@ export const fr: Record<string, string> = {
   "{name} - tracklist.txt": "{name} - liste des pistes.txt",
   "{name} - arrangement.json": "{name} - arrangement.json",
   "Could not reach the server. Check the address, and make sure the server allows cross-origin (CORS) requests from this site.": "Impossible de joindre le serveur. Vérifiez l’adresse et assurez-vous que le serveur autorise les requêtes interorigines (CORS) depuis ce site.",
-  "This source has no address": "Cette source n’a pas d’adresse"
+  "This source has no address": "Cette source n’a pas d’adresse",
+  "Export quality": "Qualité d'exportation",
+  "16-bit (smallest)": "16 bits (plus léger)",
+  "24-bit (studio)": "24 bits (studio)",
+  "32-bit float (lossless)": "32 bits flottant (sans perte)",
+  "{bits}-bit, rendered offline with exact timing": "{bits} bits, rendu hors ligne avec un minutage exact",
+  "Song deleted from library": "Morceau supprimé de la bibliothèque"
 }
 export default fr
