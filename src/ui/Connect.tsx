@@ -30,7 +30,7 @@ function AddSource({ kind, onClose }: { kind: SourceKind; onClose: () => void })
     } catch (e) { setErr(explainNetworkError(e)) }
     setBusy(false)
   }
-  const input = (k: keyof typeof f, label: string, type = 'text', ph = '') => (
+  const input = (k: keyof typeof f, label: string, type: 'text' | 'url' | 'password' = 'text', ph = '') => (
     <label class="field"><span style={{ minWidth: 90 }}>{label}</span>
       <input type={type} placeholder={ph} value={f[k]} autocapitalize="off" autocomplete="off" spellcheck={false} onInput={set(k)} style={{ flex: 1, minWidth: 0, background: 'none', border: 0, textAlign: 'right', outline: 0 }} /></label>
   )
