@@ -11,7 +11,7 @@
 ## Library
 - ✅ Import from Files/iCloud Drive/USB via the iOS file picker (copies into app storage) · ❌ linking a folder in place
 - ✅ Songs, albums, artists, genres, favorites, recents, unplayed, search, sort · ✅ playlists (create, rename, reorder, delete)
-- ✅ Tags, artwork, lyrics, comments read · ✅ edit info/artwork/lyrics (stored in SEAM; original file untouched) · ✅ bookmarks · ✅ audiobooks (.m4b, >1 h, or set manually): streaming player, skip, 0.5–3× speed, sleep timer, resume · ✅ export a copy with tags written (MP3, FLAC) · ⬜ M4A tag writing
+- ✅ Tags, artwork, lyrics, comments read · ✅ edit info/artwork/lyrics (stored in SEAM; original file untouched) · ✅ bookmarks · ✅ audiobooks (.m4b, >1 h, or set manually): streaming player, skip, 0.5–3× speed, sleep timer, resume · ✅ export a copy with tags written (MP3, FLAC, M4A) · ✅ M4A tag writing
 - ✅ Backup/restore (.seambak with audio + artwork; keep/replace) · ✅ passcode (PBKDF2 + lockout; a convenience lock, not encryption) · ✅ text size, reduce motion, high contrast, labelled controls · 🟡 localization en/es/fr/de (T050 in progress)
 ## EP Transition Studio (priority)
 - ✅ Arrangements (multiple, duplicate, compare), ✅ per-transition crossfade + curve, ✅ non-destructive trims + fades, ✅ waveform + drag handles, ✅ suggested start/end points, ✅ preview a join, ✅ play whole sequence
