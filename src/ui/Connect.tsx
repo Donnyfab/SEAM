@@ -2,18 +2,22 @@ import { useEffect, useRef, useState } from 'preact/hooks'
 import { downloadRemote, notify, playRemote, playStream, removeSource, saveSource, sources } from '../state'
 import { createAdapter, explainNetworkError, jellyfinLogin, testSource, type RemoteAdapter, type RemoteNode, type Source, type SourceKind } from '../connect/sources'
 import { parseM3U, parsePLS } from '../connect/playlists'
+import { beginAuth, isCloud, redirectUri } from '../connect/cloud'
 import { fmtBytes } from './common'
 
 const KINDS: { kind: SourceKind; label: string; icon: string; color: string; hint: string }[] = [
   { kind: 'webdav', label: 'WebDAV / NAS / Nextcloud', icon: '☁', color: '#0a84ff', hint: 'Synology, Nextcloud, Apache, rclone serve webdav…' },
   { kind: 'subsonic', label: 'Subsonic / Navidrome', icon: '♪', color: '#ff9f0a', hint: 'Navidrome, Airsonic, Gonic, Subsonic' },
   { kind: 'jellyfin', label: 'Jellyfin', icon: '▶', color: '#8e5cd9', hint: 'Your Jellyfin server' },
+  { kind: 'dropbox', label: 'Dropbox', icon: '◆', color: '#0061ff', hint: 'Sign in with your own free Dropbox app (Client ID)' },
+  { kind: 'gdrive', label: 'Google Drive', icon: '▲', color: '#34a853', hint: 'Needs your own Google Cloud OAuth Client ID' },
+  { kind: 'onedrive', label: 'OneDrive', icon: '☁', color: '#0a64ad', hint: 'Needs your own Microsoft Entra app (Client ID)' },
   { kind: 'radio', label: 'Internet radio', icon: '📻', color: '#30d158', hint: 'Stream URLs, .m3u and .pls files' },
 ]
 const kindInfo = (k: SourceKind) => KINDS.find(x => x.kind === k)
 
 function AddSource({ kind, onClose }: { kind: SourceKind; onClose: () => void }) {
-  const [f, setF] = useState({ name: kindInfo(kind)?.label.split(' ')[0] ?? '', url: '', username: '', password: '' })
+  const [f, setF] = useState({ name: kindInfo(kind)?.label.split(' ')[0] ?? '', url: '', username: '', password: '', clientId: '' })
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const set = (k: keyof typeof f) => (e: Event) => setF({ ...f, [k]: (e.target as HTMLInputElement).value })
@@ -21,6 +25,7 @@ function AddSource({ kind, onClose }: { kind: SourceKind; onClose: () => void })
     setBusy(true); setErr('')
     try {
       let s: Source = { id: crypto.randomUUID(), kind, name: f.name.trim() || 'Server', url: f.url.trim(), username: f.username.trim(), password: f.password }
+      if (isCloud(kind)) { await beginAuth(kind, f.name.trim() || kindInfo(kind)!.label, f.clientId); return }
       if (kind === 'radio') s = { id: s.id, kind, name: s.name, stations: [] }
       else {
         if (kind === 'jellyfin') s = await jellyfinLogin(s)
@@ -36,15 +41,17 @@ function AddSource({ kind, onClose }: { kind: SourceKind; onClose: () => void })
   )
   return (
     <div class="sheet" role="dialog" aria-label="Add source">
-      <div class="nav" style={{ margin: '-12px -24px 8px' }}><button class="side" onClick={onClose}>Cancel</button><h1>{kindInfo(kind)?.label}</h1><button class="side right" disabled={busy} onClick={save}>{busy ? '…' : 'Connect'}</button></div>
+      <div class="nav" style={{ margin: '-12px -24px 8px' }}><button class="side" onClick={onClose}>Cancel</button><h1>{kindInfo(kind)?.label}</h1><button class="side right" disabled={busy} onClick={save}>{busy ? '…' : isCloud(kind) ? 'Sign in' : 'Connect'}</button></div>
       <div class="group" style={{ margin: '8px 0' }}>
         {input('name', 'Name')}
-        {kind !== 'radio' && input('url', 'Address', 'url', 'https://music.example.com')}
-        {kind !== 'radio' && input('username', 'Username')}
-        {kind !== 'radio' && input('password', 'Password', 'password')}
+        {isCloud(kind) && input('clientId', 'Client ID')}
+        {kind !== 'radio' && !isCloud(kind) && input('url', 'Address', 'url', 'https://music.example.com')}
+        {kind !== 'radio' && !isCloud(kind) && input('username', 'Username')}
+        {kind !== 'radio' && !isCloud(kind) && input('password', 'Password', 'password')}
       </div>
       {err && <div class="hint" style={{ color: 'var(--danger)' }}>{err}</div>}
-      <div class="hint">{kindInfo(kind)?.hint}. Credentials are stored only on this device. {kind !== 'radio' && 'The server must use https:// and allow cross-origin (CORS) requests from this site.'}</div>
+      <div class="hint">{kindInfo(kind)?.hint}. Credentials are stored only on this device. {kind !== 'radio' && !isCloud(kind) && 'The server must use https:// and allow cross-origin (CORS) requests from this site.'}</div>
+      {isCloud(kind) && <div class="hint">Register an app with your provider (free), choose “single-page / public client (PKCE)”, and add this redirect URI exactly:<br /><code style={{ userSelect: 'all', wordBreak: 'break-all' }}>{redirectUri()}</code><br />Read-only access is requested. SEAM never sees your password.</div>}
     </div>
   )
 }

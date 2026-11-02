@@ -1,3 +1,4 @@
+import { createCloudAdapter, isCloud } from './cloud'
 import { WebDavClient, isAudioName } from './webdav'
 import { SubsonicClient, toTrackLike as subTrack } from './subsonic'
 import { JellyfinClient, toTrackLike as jfTrack } from './jellyfin'
@@ -49,6 +50,7 @@ export function explainNetworkError(e: unknown): string {
 const ext = (n: string) => n.split('.').pop()?.toLowerCase() ?? ''
 
 export function createAdapter(s: Source): RemoteAdapter {
+  if (isCloud(s.kind)) return createCloudAdapter(s)
   if (!s.url) throw new ConnectError('This source has no address')
   checkReachable(s.url)
   if (s.kind === 'webdav') {

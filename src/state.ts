@@ -6,6 +6,7 @@ import { gainForTarget, measureLufs, samplePeak } from './audio/loudness'
 import { makeTransition } from './core/crossfade'
 import { shuffleUpcoming, makeQueue } from './core/queue'
 import { importFiles } from './library/importer'
+import { finishAuth, setSourceSaver } from './connect/cloud'
 import { createAdapter, type RemoteNode, type Source } from './connect/sources'
 import {
   defaultSettings, loadSources, saveSources, loadBookmarks, loadPositions, savePositions, saveBookmarks, saveArt, type Bookmark, deleteTrack, loadArrangements, loadArt, loadFile, loadPlaylists, loadSettings, loadTracks,
@@ -305,6 +306,8 @@ export async function boot() {
   const [t, p, a, s, bm, pos] = await Promise.all([loadTracks(), loadPlaylists(), loadArrangements(), loadSettings(), loadBookmarks(), loadPositions()])
   bookmarks.value = bm; positions.value = pos
   sources.value = await loadSources()
+  setSourceSaver(saveSource)
+  try { const s = await finishAuth(); if (s) { await saveSource(s); notify(`Connected to ${s.name}`) } } catch (e) { notify(e instanceof Error ? e.message : 'Sign-in failed') }
   tracks.value = t; playlists.value = p; arrangements.value = a; settings.value = s
   try { await navigator.storage?.persist?.() } catch { /* best effort */ }
   ready.value = true
