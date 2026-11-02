@@ -107,3 +107,20 @@ export function useInView<T extends Element>(margin = '240px') {
   }, [seen])
   return [ref, seen] as const
 }
+
+/** iOS-style back gesture: a rightward swipe that starts at the left edge calls `onBack` (ignored while scrolling vertically). */
+export function useEdgeSwipeBack(onBack: (() => void) | null) {
+  useEffect(() => {
+    if (!onBack) return
+    let sx = 0, sy = 0, tracking = false
+    const down = (e: PointerEvent) => { tracking = e.clientX < 24 && e.pointerType !== 'mouse'; sx = e.clientX; sy = e.clientY }
+    const up = (e: PointerEvent) => {
+      if (!tracking) return
+      tracking = false
+      const dx = e.clientX - sx, dy = Math.abs(e.clientY - sy)
+      if (dx > 80 && dy < dx * 0.6) onBack()
+    }
+    window.addEventListener('pointerdown', down, { passive: true }); window.addEventListener('pointerup', up, { passive: true })
+    return () => { window.removeEventListener('pointerdown', down); window.removeEventListener('pointerup', up) }
+  }, [onBack])
+}

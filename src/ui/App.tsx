@@ -48,7 +48,8 @@ export function App() {
     performance.mark('seam:first-render')
     void initLock()
     // Warm the likely next screens and the Last.fm service once the first paint is done.
-    const idle = (window as unknown as { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback ?? ((f: () => void) => setTimeout(f, 1500))
+    const ric = (window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => void }).requestIdleCallback
+    const idle = (f: () => void) => (ric ? ric(f, { timeout: 800 }) : setTimeout(f, 600))
     idle(() => { void Library.preload().catch(() => {}); void Studio.preload().catch(() => {}); void import('../connect/scrobbler').then(m => m.loadLastFm()).catch(() => {}) })
     const on = () => { online.value = true; notify(translate('Back online')) }, off = () => { online.value = false }
     const saveErr = () => notify(translate('Could not save your changes. Storage may be full.'))

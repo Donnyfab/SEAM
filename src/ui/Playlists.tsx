@@ -8,7 +8,7 @@ import {
 import type { Playlist, StoredTrack } from '../library/store'
 import { exportM3U, exportSeamJson, matchEntries, moveItem, parsePlaylistFile, playlistDuration, searchPlaylists, sortPlaylists } from '../library/playlistIO'
 import { searchTracks, sortTracks } from '../library/model'
-import { Art, fmt, saveBlob, useDebounced, useInView, useSheet } from './common'
+import { Art, fmt, saveBlob, useDebounced, useEdgeSwipeBack, useInView, useSheet } from './common'
 import { askConfirm, askText, GlassMenu, GlassSheet, type GlassItem } from './Glass'
 import { Icon } from './Icon'
 import { EditTrack } from './Edit'
@@ -16,8 +16,10 @@ import { useSortable } from './useSortable'
 
 type View = { kind: 'list' } | { kind: 'detail'; id: string }
 const view = signal<View>({ kind: 'list' })
-const open = (id: string) => { view.value = { kind: 'detail', id } }
-const back = () => { view.value = { kind: 'list' } }
+let listScroll = 0
+const scroller = () => document.querySelector<HTMLElement>('.view')
+const open = (id: string) => { listScroll = scroller()?.scrollTop ?? 0; view.value = { kind: 'detail', id }; scroller()?.scrollTo({ top: 0 }) }
+const back = () => { view.value = { kind: 'list' }; requestAnimationFrame(() => scroller()?.scrollTo({ top: listScroll })) }
 
 function durationLabel(sec: number): string {
   if (sec < 60) return translate('secondsCount', { count: Math.round(sec) })
@@ -189,7 +191,7 @@ function PlaylistList() {
     const on = sel.includes(p.id)
     const go = () => (selecting ? toggle(p.id) : open(p.id))
     return s.playlistView === 'grid' ? (
-      <div class="pl-card" style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}>
+      <div class="pl-card" style={{ animationDelay: `${Math.min(i, 6) * 20}ms` }}>
         <button style={{ display: 'block', width: '100%' }} onClick={go} aria-label={p.name}><Cover p={p} /></button>
         {selecting ? <span class={`sel-badge${on ? ' on' : ''}`}><Icon name={on ? 'check' : 'circle'} size={18} /></span> : <button class="pl-more" aria-label={translate('More')} onClick={() => setSheet(p)}><Icon name="dots" size={18} /></button>}
         <div class="name">{p.name}</div><div class="sub">{durationLabel(durationOf(p))}</div>
@@ -373,6 +375,7 @@ function PlaylistDetail({ id }: { id: string }) {
 
 export function Playlists() {
   const v = view.value
+  useEdgeSwipeBack(v.kind === 'detail' ? back : null)
   // a deleted playlist must not leave the user on a dead screen
   useEffect(() => { if (v.kind === 'detail' && !playlists.value.some(p => p.id === v.id)) back() }, [playlists.value.length])
   return <div key={v.kind === 'detail' ? v.id : 'list'} style={{ animation: 'rise .28s cubic-bezier(.2,.8,.2,1) both' }}>{v.kind === 'list' ? <PlaylistList /> : <PlaylistDetail id={v.id} />}</div>

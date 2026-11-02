@@ -6,7 +6,7 @@ import { groupAlbums, groupArtists, groupGenres, recents, searchTracks, sortTrac
 import { EditTrack } from './Edit'
 import { Files } from './Files'
 import { exportWithTags } from '../library/exportTags'
-import { ActionMenu, Art, fmt, useDebounced } from './common'
+import { ActionMenu, Art, fmt, useDebounced, useEdgeSwipeBack } from './common'
 import { askText, GlassSheet, type GlassItem } from './Glass'
 import { Icon } from './Icon'
 import { VirtualList } from './VirtualList'
@@ -134,6 +134,7 @@ function PlaylistPage({ id }: { id: string }) {
 
 export function Library() {
   const page = stack.value.at(-1)!
+  useEdgeSwipeBack(stack.value.length > 1 ? pop : null)
   const everything = tracks.value
   const all = everything.filter(t => t.kind !== 'audiobook')
   let title = translate("Library")
@@ -173,9 +174,9 @@ export function Library() {
     case 'playlist': title = playlists.value.find(p => p.id === page.id)?.name ?? translate("Playlist"); body = <PlaylistPage id={page.id} />; break
   }
   return (
-    <>
+    <div class="page-in" key={page.kind + (page.kind === 'group' ? page.title : page.kind === 'playlist' ? page.id : '')}>
       {page.kind !== 'root' && <div class="nav"><button class="side" onClick={pop}>{translate("‹ Back")}</button><h1>{title}</h1><span class="side right" /></div>}
       {body}
-    </>
+    </div>
   )
 }

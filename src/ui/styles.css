@@ -197,3 +197,11 @@ button:not(:disabled):active { opacity: .6; }
 .vrow + .vrow::before { content: ''; position: absolute; top: 0; left: 70px; right: 0; border-top: .5px solid var(--sep); }
 .vrow { position: relative; } .vrow > .row { height: 100%; min-height: 0; }
 .vrow > .row .row { padding-top: 0; padding-bottom: 0; }
+
+.glass-item { min-height: 44px; }
+.pl-more { width: 44px; height: 44px; right: 2px; top: 2px; background: none; }
+.pl-more::after { display: none; }
+.pl-more::before { content: ''; position: absolute; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,.55); inset: auto; }
+.pl-more svg { position: relative; }
+.page-in { animation: rise var(--dur-3) var(--ease-out) both; }
+.pl-card { animation-duration: .24s; }
