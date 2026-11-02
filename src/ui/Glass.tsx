@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'preact/hooks'
 import { signal } from '@preact/signals'
 import { t } from '../i18n'
 import { Icon, type IconName } from './Icon'
-import { scrimProps, useOverlay } from './overlay'
+import { OverlayPortal, scrimProps, useOverlay } from './overlay'
 
 export interface GlassItem {
   label: string
@@ -31,7 +31,7 @@ export function GlassMenu({ items, anchor, onClose, top = 56 }: { items: GlassIt
     if (i.sub) setSub(i); else { onClose(); i.run?.() }
   }
   return (
-    <div class="glass-scrim" {...scrimProps(onClose)} role="presentation">
+    <OverlayPortal><div class="glass-scrim" {...scrimProps(onClose)} role="presentation">
       <div ref={ref} class={`glass-menu from-${anchor}`} style={{ top: `calc(var(--safe-t) + ${top}px)`, [anchor]: '12px' }} role="menu" aria-label={sub?.label}>
         {sub && <button class="glass-item back" role="menuitem" onClick={() => setSub(null)}><Icon name="chevL" size={18} /><span>{sub.label}</span></button>}
         {list.map(i => (
@@ -41,7 +41,7 @@ export function GlassMenu({ items, anchor, onClose, top = 56 }: { items: GlassIt
             {i.sub && <Icon name="chevR" size={16} />}
           </button>))}
       </div>
-    </div>
+    </div></OverlayPortal>
   )
 }
 
@@ -52,7 +52,7 @@ export function GlassSheet({ title, subtitle, items, onClose }: { title?: string
   const ref = useRef<HTMLDivElement>(null)
   useOverlay(ref, () => (sub ? setSub(null) : onClose()), { menu: true })
   return (
-    <div class="glass-scrim dim" {...scrimProps(onClose)} role="presentation">
+    <OverlayPortal><div class="glass-scrim dim" {...scrimProps(onClose)} role="presentation">
       <div ref={ref} class="glass-sheet" role="menu" aria-label={title} tabIndex={-1}>
         <div class="grab" />
         {(title || sub) && <div class="gs-head">{sub && <button aria-label={t('Back')} onClick={() => setSub(null)}><Icon name="chevL" size={18} /></button>}<div><div class="gs-title">{sub ? sub.label : title}</div>{!sub && subtitle && <div class="gs-sub">{subtitle}</div>}</div></div>}
@@ -61,7 +61,7 @@ export function GlassSheet({ title, subtitle, items, onClose }: { title?: string
             <span class="gi-icon">{i.checked ? <Icon name="check" size={20} /> : i.icon ? <Icon name={i.icon} size={22} /> : null}</span><span class="gi-label">{i.label}</span>{i.sub && <Icon name="chevR" size={16} />}
           </button>))}</div>
       </div>
-    </div>
+    </div></OverlayPortal>
   )
 }
 
@@ -93,7 +93,7 @@ function Dialog({ d }: { d: DialogState }) {
   useOverlay(ref, () => done(null), { initialFocus: () => ref.current?.querySelector<HTMLElement>(d.kind === 'text' ? 'input' : d.danger ? 'button[type=button]' : 'button[type=submit]') })
   const dirty = d.kind === 'text' && text !== (d.value ?? '')
   return (
-    <div class="glass-scrim dim center" {...scrimProps(() => { if (!dirty) done(null) })}>
+    <OverlayPortal><div class="glass-scrim dim center" {...scrimProps(() => { if (!dirty) done(null) })}>
       <form ref={ref} class="glass-dialog" {...({ role: d.danger ? 'alertdialog' : 'dialog' } as object)} aria-modal="true" aria-label={d.title} onSubmit={e => { e.preventDefault(); done(d.kind === 'text' ? (text.trim() || null) : true) }}>
         <div class="gd-title">{d.title}</div>
         {d.message && <div class="gd-msg">{d.message}</div>}
@@ -103,6 +103,6 @@ function Dialog({ d }: { d: DialogState }) {
           <button type="submit" class={d.danger ? 'danger' : 'primary'}>{d.ok}</button>
         </div>
       </form>
-    </div>
+    </div></OverlayPortal>
   )
 }

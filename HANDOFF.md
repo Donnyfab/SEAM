@@ -26,3 +26,29 @@
 - The existing bottom tab bar is now the floating glass pill (accent #ff375f, `--tab-h` is 88px so the mini player/action bar sit above it) with a `.tab-fade` gradient.
 - Removed: artwork-reactive glass on the detail (`glass-page`, `detail-hero`, `playlistPalette`, `Cover big`); the detail's Play-next button (still in the More menu). Now Playing still uses `useGlow`.
 - e2e/a11y/bench/shots scripts updated to the new selectors; e2e 21/21.
+
+## Done: T074 playlist/navigation fixes (2026-11-02)
+- Branch `codex/t074-playlist-navigation`, ready for Claude to merge. GitHub main and the playlist redesign branch both matched local base `fc2af70` when checked.
+- Replaced the floating pill with a 56px bottom-docked tab bar plus the device safe area; corrected mini-player spacing, selection-toolbar overlap, narrow search fields and double-counted header safe area. Replaced the emoji Next icon with SVG.
+- Reproduced Add songs at 4,301px tall on a 390×844 viewport. Portaled playlist sheets and glass overlays outside page animations; removed persistent page transform/stacking effects. Picker now measures 390×844 and virtualizes against its own sheet scroller, including deep scrolling through 3,000 songs.
+- Fixed one-tap Now Playing Close (the drag handler previously captured the button's tap); added drag threshold, cancellation and timer cleanup. Backdrop pointer state is isolated and cancelled safely.
+- Closing search clears its filter; empty search results disable playback. Rearrange switches grid to rows. Custom artwork replacement refreshes immediately; Add songs counts only new entries.
+- Verification: `npm test` 509/509, `npm run typecheck`, `npm run build`, `npm run e2e -- http://127.0.0.1:4183/` 29/29; a11y script reports 0 issues. Tested Chromium touch at 320×568, 390×844, 440×956, 844×390 and 1280×800 with simulated top/bottom safe areas. Screenshots inspected; no framework overlay or page/console errors. Browser plugin absent; used the existing Playwright workflow without adding dependencies. Real iPhone Safari/PWA and keyboard/background-audio behavior remain unverified. Existing Book.tsx static/dynamic import build warning remains.
+- Not merged, pushed or deployed; owner/Claude retains merge ownership.
+
+## Done: T075 compact visual scale (2026-11-02)
+- Branch `codex/t075-compact-design` is based on T074 (`e80529d`) and includes its interaction/navigation fixes. Ready for Claude to merge; not pushed or deployed.
+- Kept the existing Preact/CSS design system and SF/system font. Base type is 16px with the saved text-scale multiplier; large headings 28px, playlist title 22px, song title 15px, artist 12px. Artists now sit below song titles; duration is a quiet trailing column.
+- Playlist rows and virtual library/picker rows are 56px instead of 64px; thumbnails 40px instead of 48px. Detail rows expand with text scale. Header artwork is 200–260px plus safe area, with a compact 140px header when artwork is absent. Mini player is 52px instead of 60px, with a 740px desktop width limit; dock is 52px plus safe area. Visual icon surfaces are smaller while hit targets stay at least 44px. Now Playing artwork is capped at 240px instead of 300px; softened shadows and reduced control sizes.
+- Reference comparison: inspected both owner-supplied JPGs in Downloads with the final rendered screenshots. Checked (1) title/body/caption hierarchy, (2) artwork-to-song balance, (3) row/thumbnail density and artist placement, (4) white Play pill and smaller surrounding controls, (5) thin separators/subtle glass, (6) compact player/dock and safe areas. No extra visible copy or decorative labels; artist content comes from the library. Intentional differences: SEAM's five functional tabs, dark shell and imported artwork remain product-specific; these framed/perspective references are visual direction rather than exact pixel-size app screenshots.
+- Verified locally in IAB (creation/list/detail) and production Playwright at 320×568, 390×844, 440×956, 844×390 and 1280×800, including simulated safe areas, artwork replacement and 140% type. At 390×844 with artwork and iPhone safe areas, six full song rows fit above the mini player. Inspected mobile/detail/picker/player/desktop screenshots; page identity SEAM, no blank screen, framework overlay or page/console errors. QA screenshots and test scripts remain outside the repo in `/tmp/seam-t075-*`.
+- Checks: 509 unit tests, typecheck, production build, 31 browser checks and accessibility script (0 issues). Existing Book.tsx static/dynamic import warning remains. Native iPhone Safari/PWA, keyboard and background audio still need physical-device verification.
+
+## Deployment handoff (2026-11-02)
+- Pushed `codex/t075-compact-design` and opened https://github.com/Donnyfab/SEAM/pull/1 with both T074 and T075. PR is mergeable; a `/SEAM/` production build also passed.
+- Live GitHub Pages is still the successful `fc2af70` deployment (run 41485203609). Phone users will not receive the fixes until PR #1 merges to `main` and the Pages workflow succeeds.
+- `AGENTS.md` says "Claude merges." Merge ownership is the remaining step; requested an owner override before Codex merges/deploys.
+
+## Done: delivery policy update (2026-11-02)
+- Owner explicitly instructed: "GOING FORWARD ALWAYS MERGE AND DEPLOY ANY CHANGES YOU MAKE". Updated AGENTS.md to persist this standing authorization; agents now push, merge and verify deployment without requesting merge approval again. This supersedes all earlier Claude-only merge handoff notes.
+- T074/T075 implementation and validation are complete. PR #1 contains both; merge to main triggers the existing GitHub Pages workflow. Verify that workflow and the live bundle before reporting deployment complete.
