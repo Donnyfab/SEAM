@@ -54,7 +54,7 @@ await test('delete playlist asks for confirmation, then offers Undo that restore
 await test('open playlist, play all, mini player shows playing', async () => {
   await page.locator('.pl-card', { hasText: 'Playlist 0' }).locator('button').first().evaluate(b => b.click()); await page.waitForSelector('.pd-hero')
   await page.locator('.pd-actions button[aria-label="Play all"]').click()
-  await page.waitForFunction(() => [...document.querySelectorAll('.mini .ctl')].some(b => b.textContent.includes('❚❚')), null, { timeout: 10000 })
+  await page.locator('.mini .ctl[aria-label="Pause"]').waitFor({ timeout: 10000 })
 })
 await test('play next while playing queues without error', async () => {
   await page.locator('.pd-nav button[aria-label="More"]').click(); await page.waitForSelector('.glass-menu'); await glass('Play next'); await page.waitForFunction(() => /Playing next|Added/.test(document.body.innerText), null, { timeout: 4000 }).catch(async () => { throw new Error('no toast; body: ' + (await page.locator('.toast').allInnerTexts()).join('|')) })
@@ -277,6 +277,43 @@ await test('bottom navigation: fits small phones, safe areas, landscape and desk
   }
   await page.setViewportSize({ width: 390, height: 844 })
   await page.evaluate(() => { document.documentElement.style.removeProperty('--safe-b'); document.documentElement.style.removeProperty('--safe-t') })
+})
+await test('compact playlist: six full rows fit above the player with artwork and iPhone safe areas', async () => {
+  await page.evaluate(() => {
+    document.documentElement.style.setProperty('--safe-t', '47px')
+    document.documentElement.style.setProperty('--safe-b', '34px')
+    document.querySelector('.view').scrollTop = 0
+  })
+  // Let the scroll and content-visibility paint settle before reading visible row text.
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+  const metrics = await page.evaluate(() => {
+    const mini = document.querySelector('.mini').getBoundingClientRect()
+    const rows = [...document.querySelectorAll('.song-row')].map(el => el.getBoundingClientRect())
+    const title = document.querySelector('.pd-title h1')
+    return { visible: rows.filter(r => r.y >= 0 && r.bottom <= mini.y).length, title: parseFloat(getComputedStyle(title).fontSize), mini: mini.height, row: rows[0].height }
+  })
+  assert.ok(metrics.visible >= 6, `only ${metrics.visible} full songs above player`)
+  assert.ok(metrics.title <= 23 && metrics.title >= 20)
+  assert.ok(metrics.row >= 44 && metrics.row <= 56)
+  assert.ok(metrics.mini <= 54)
+  assert.match(await page.locator('.song-row .ss').first().innerText(), /Artist/)
+  assert.match(await page.locator('.song-row .pd-duration').first().innerText(), /\d+:\d{2}/)
+  for (const button of await page.locator('.pd-nav button, .pd-actions button, .mini button').all()) {
+    const r = await button.boundingBox(); assert.ok(r.width >= 44 && r.height >= 44, 'compact style reduced a tap target')
+  }
+  await page.evaluate(() => { document.documentElement.style.removeProperty('--safe-t'); document.documentElement.style.removeProperty('--safe-b') })
+})
+await test('larger text remains readable without overlapping the player or clipping song text', async () => {
+  await page.evaluate(() => { document.documentElement.style.fontSize = '22.4px'; document.querySelector('.view').scrollTop = 0 })
+  const sizes = await page.locator('.song-row').first().evaluate(row => {
+    const text = row.querySelector('.pd-text'), main = row.querySelector('.main')
+    return { height: row.getBoundingClientRect().height, text: text.getBoundingClientRect().height, title: parseFloat(getComputedStyle(row.querySelector('.st')).fontSize), main: main.getBoundingClientRect().height }
+  })
+  assert.ok(sizes.title >= 21 && sizes.height > 56)
+  assert.ok(sizes.text <= sizes.main, 'larger song text was clipped')
+  const mini = await page.locator('.mini').boundingBox(), nav = await page.locator('.tabbar').boundingBox()
+  assert.ok(mini.y + mini.height <= nav.y)
+  await page.evaluate(() => { document.documentElement.style.fontSize = '16px' })
 })
 await test('no uncaught page errors', async () => { assert.deepEqual(errors, []) })
 

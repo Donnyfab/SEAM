@@ -352,7 +352,8 @@ function PlaylistDetail({ id }: { id: string }) {
         {selecting && <span class={`sel-circle${on ? ' on' : ''}`}><Icon name={on ? 'checkCircle' : 'circle'} /></span>}
         <button class="main" onClick={playHere}>
           <Thumb id={x.id} />
-          <span class="pd-text"><span class="st">{x.title}</span><span class="ss">{fmt(x.duration)}</span></span>
+          <span class="pd-text"><span class="st">{x.title}</span><span class="ss">{x.artist}</span></span>
+          <span class="pd-duration">{fmt(x.duration)}</span>
         </button>
         {rearrange && manual ? <span class="handle" aria-label={translate('Reorder {title}', { title: x.title })} role="button" tabIndex={0}><Icon name="list" /></span>
           : !selecting && <button class="more" aria-label={translate('More options for {title}', { title: x.title })} onClick={() => setRowSheet(x)}><Icon name="dots" size={20} /></button>}
@@ -374,7 +375,7 @@ function PlaylistDetail({ id }: { id: string }) {
             </div>}
         </div>
       </div>
-      <header class="pd-hero">
+      <header class={`pd-hero${cover ? '' : ' no-cover'}`}>
         {cover ? <img class="pd-hero-img" src={cover} alt="" /> : <div class="pd-hero-fallback" />}
         <div class="pd-hero-fade" aria-hidden="true" />
       </header>
