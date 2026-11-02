@@ -1,3 +1,4 @@
+import { resilientFetch } from './net'
 import { DropboxClient } from './dropbox'
 import { GoogleDriveClient, isFolder } from './gdrive'
 import { OneDriveClient } from './onedrive'
@@ -14,7 +15,7 @@ export const redirectUri = () => location.origin + location.pathname.replace(/in
 
 type Tokens = { access_token: string; refresh_token?: string; expires_in?: number }
 const clientFor = (kind: CloudKind, clientId: string, accessToken?: string) =>
-  kind === 'dropbox' ? new DropboxClient({ clientId, accessToken }) : kind === 'gdrive' ? new GoogleDriveClient({ clientId, accessToken }) : new OneDriveClient({ clientId, accessToken })
+  kind === 'dropbox' ? new DropboxClient({ fetchFn: resilientFetch(), clientId, accessToken }) : kind === 'gdrive' ? new GoogleDriveClient({ fetchFn: resilientFetch(), clientId, accessToken }) : new OneDriveClient({ fetchFn: resilientFetch(), clientId, accessToken })
 
 /** Step 1: remember the PKCE verifier, then send the user to the provider's consent page. */
 export async function beginAuth(kind: CloudKind, name: string, clientId: string): Promise<void> {
@@ -55,16 +56,16 @@ const byFolderFirst = (a: RemoteNode, b: RemoteNode) => Number(b.container) - Nu
 
 export function createCloudAdapter(s: Source): RemoteAdapter {
   if (s.kind === 'dropbox') {
-    const c = async () => new DropboxClient({ clientId: s.clientId!, accessToken: await freshToken(s) })
+    const c = async () => new DropboxClient({ fetchFn: resilientFetch(), clientId: s.clientId!, accessToken: await freshToken(s) })
     const list = async (path: string) => {
       const cl = await c(); const out: RemoteNode[] = []; let cursor: string | undefined
       do { const r = await cl.listFolder(path, cursor); cursor = r.hasMore ? r.cursor : undefined; for (const e of r.entries) if (e.isDir || isAudioName(e.name)) out.push({ id: e.path, title: e.name, container: e.isDir, size: e.size, fileName: e.name }) } while (cursor)
       return out.sort(byFolderFirst)
     }
-    return { root: () => list(''), children: n => list(n.id), blob: async n => { const url = await (await c()).temporaryLink(n.id); const r = await fetch(url); if (!r.ok) throw new ConnectError(`Dropbox returned ${r.status}`); return r.blob() } }
+    return { root: () => list(''), children: n => list(n.id), blob: async n => { const url = await (await c()).temporaryLink(n.id); const r = await resilientFetch()(url); if (!r.ok) throw new ConnectError(`Dropbox returned ${r.status}`); return r.blob() } }
   }
   if (s.kind === 'gdrive') {
-    const c = async () => new GoogleDriveClient({ clientId: s.clientId!, accessToken: await freshToken(s) })
+    const c = async () => new GoogleDriveClient({ fetchFn: resilientFetch(), clientId: s.clientId!, accessToken: await freshToken(s) })
     const list = async (folder: string) => {
       const cl = await c(); const out: RemoteNode[] = []; let tok: string | undefined
       do { const r = await cl.list(folder, tok); tok = r.nextPageToken; for (const f of r.files) { const dir = isFolder(f.mimeType); if (dir || isAudioName(f.name) || f.mimeType.startsWith('audio/')) out.push({ id: f.id, title: f.name, container: dir, size: f.size ? Number(f.size) : undefined, fileName: f.name }) } } while (tok)
@@ -72,7 +73,7 @@ export function createCloudAdapter(s: Source): RemoteAdapter {
     }
     return { root: () => list('root'), children: n => list(n.id), blob: async n => (await c()).downloadBlob(n.id) }
   }
-  const c = async () => new OneDriveClient({ clientId: s.clientId!, accessToken: await freshToken(s) })
+  const c = async () => new OneDriveClient({ fetchFn: resilientFetch(), clientId: s.clientId!, accessToken: await freshToken(s) })
   const list = async (id: string) => {
     const cl = await c(); const out: RemoteNode[] = []; let next: string | undefined
     do { const r = await cl.listChildren(id, next); next = r.nextLink; for (const e of r.entries) if (e.isDir || isAudioName(e.name)) out.push({ id: e.id, title: e.name, container: e.isDir, size: e.size, fileName: e.name }) } while (next)
