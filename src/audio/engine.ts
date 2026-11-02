@@ -79,7 +79,10 @@ export class PlaybackEngine {
 
   /** Current position within the playing item, seconds. */
   position(): number {
-    const v = this.voices.find(x => x.index === this.state.index && !x.ended) ?? this.voices.at(-1)
+    // With repeat-one (or a crossfade into the same index) two voices can share an index: prefer the newest one that has started.
+    const now = this.ctx.currentTime
+    const live = this.voices.filter(x => x.index === this.state.index && !x.ended)
+    const v = live.filter(x => x.t0 <= now).at(-1) ?? live[0] ?? this.voices.at(-1)
     if (!v) return 0
     return Math.min(Math.max(this.ctx.currentTime - v.t0, 0), v.dur)
   }
