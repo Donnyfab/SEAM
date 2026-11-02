@@ -25,7 +25,7 @@ const labels: Record<Tab, string> = { playlists: 'Playlists', library: 'Library'
 export function App() {
   const [tab, setTab] = useState<Tab>('playlists')
   const [open, setOpen] = useState(false)
-  useEffect(() => { void initLock(); void loadLastFm() }, [])
+  useEffect(() => { performance.mark('seam:first-render'); void initLock(); void loadLastFm() }, [])
   useEffect(() => {
     const r = document.documentElement, st = settings.value
     r.style.fontSize = `${17 * st.textScale}px`

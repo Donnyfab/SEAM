@@ -16,6 +16,7 @@ options.vnode = (vnode: VNode) => {
   prevVNode?.(vnode)
 }
 
+performance.mark('seam:script-start')
 registerSW({ immediate: true })
-void boot()
+void boot().then(() => performance.mark('seam:ready'))
 render(<App />, document.getElementById('app')!)
