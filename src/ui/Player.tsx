@@ -30,7 +30,7 @@ export function MiniPlayer({ onOpen }: { onOpen: () => void }) {
         <span class="meta"><span class="t">{t.title}</span><span class="s">{s.status === 'loading' ? translate('Loading…') : t.artist}</span></span>
       </button>
       <button class="ctl" aria-label={s.status === 'playing' ? translate("Pause") : translate("Play")} onClick={() => void e.toggle()}>{s.status === 'loading' ? <span class="spinner" /> : s.status === 'playing' ? '❚❚' : '▶'}</button>
-      <button class="ctl" aria-label={translate("Next")} onClick={() => void e.next()}>⏭</button>
+      <button class="ctl" aria-label={translate("Next")} onClick={() => void e.next()}><Icon name="playNext" size={22} fill /></button>
       <ProgressLine />
     </div>
   )

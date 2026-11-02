@@ -19,7 +19,7 @@ await page.evaluate(async () => { // small playable files for the first songs
   const tx = db.transaction('kv', 'readwrite'); for (let i = 0; i < 40; i++) tx.objectStore('kv').put(wav(220 + i * 10), 'seed-' + i); await new Promise(r => tx.oncomplete = r)
 })
 await page.goto(url); await page.waitForSelector('.pl-card')
-const results = []; const test = async (name, fn) => { try { await fn(); results.push(['PASS', name]) } catch (e) { results.push(['FAIL', `${name}: ${e.message.split('\n')[0]}`]) } }
+const results = []; const test = async (name, fn) => { try { await fn(); results.push(['PASS', name]) } catch (e) { results.push(['FAIL', `${name}: ${e.message.split('\n')[0]}`]) } console.log(...results.at(-1)) }
 const tab = n => page.locator('.tabbar button').nth(n)
 const glass = async txt => { await page.locator('.glass-item', { hasText: txt }).first().click(); await page.waitForTimeout(250) }
 
@@ -28,6 +28,15 @@ await test('tab order is Playlists | Library | Studio | Connect | Settings', asy
 })
 await test('playlists screen shows seeded grid and count', async () => {
   assert.equal(await page.locator('.pl-card').count(), 40); assert.match(await page.locator('.count-label').innerText(), /40/)
+})
+await test('playlist list: hiding search clears the filter and restores playlists', async () => {
+  await page.locator('.ctl-row button[aria-label="Search"]').tap()
+  await page.locator('.pl-search input').fill('no-matching-playlist-xyz')
+  await page.waitForTimeout(180)
+  assert.equal(await page.locator('.pl-card').count(), 0)
+  await page.locator('.ctl-row button[aria-label="Search"]').tap()
+  await page.waitForTimeout(180)
+  assert.equal(await page.locator('.pl-card').count(), 40)
 })
 await test('create playlist via + menu dialog, persists across reload', async () => {
   await page.locator('.pl-nav .circle-btn').first().click(); await page.waitForSelector('.glass-menu'); await glass('New playlist')
@@ -150,9 +159,127 @@ await test('Now Playing: Escape closes only the sheet and focus returns to the m
   await page.keyboard.press('Escape'); await page.waitForTimeout(250); assert.equal(await page.locator('.sheet').count(), 0)
   assert.ok(await page.locator('.pd-hero').count(), 'underlying screen was reset')
 })
+await test('Now Playing: one touch closes the player; drag cancellation restores it', async () => {
+  await page.locator('.mini-main').tap(); await page.locator('.sheet.np').waitFor()
+  await page.waitForTimeout(350)
+  await page.locator('.grab-btn').tap()
+  await page.locator('.sheet.np').waitFor({ state: 'detached', timeout: 2000 })
+  await page.locator('.mini-main').tap(); await page.locator('.sheet.np').waitFor()
+  await page.waitForTimeout(350)
+  const grab = page.locator('.grab-area')
+  await grab.dispatchEvent('pointerdown', { pointerId: 9, isPrimary: true, button: 0, clientY: 20 })
+  await grab.dispatchEvent('pointercancel', { pointerId: 9 })
+  await page.locator('.grab-btn').tap()
+  await page.locator('.sheet.np').waitFor({ state: 'detached', timeout: 2000 })
+})
+await test('playlist picker: viewport sized, blocks navigation, scrolls 3000 songs, cancels with one tap', async () => {
+  await page.locator('.pd-nav button[aria-label="More"]').tap(); await glass('Add songs')
+  const sheet = page.getByRole('dialog', { name: 'Add songs', exact: true })
+  await sheet.waitFor(); await page.waitForTimeout(350)
+  const bounds = await sheet.boundingBox()
+  assert.equal(bounds.y, 0); assert.equal(bounds.height, 844); assert.equal(bounds.width, 390)
+  const currentTab = await page.locator('.tabbar button.on').getAttribute('aria-label')
+  await page.touchscreen.tap(310, 820)
+  assert.equal(await page.locator('.tabbar button.on').getAttribute('aria-label'), currentTab)
+  const before = await sheet.locator('.vrow .t').first().innerText()
+  const background = await page.locator('.view').evaluate(el => el.scrollTop)
+  await sheet.evaluate(el => { el.scrollTop = 64000 })
+  await page.waitForTimeout(150)
+  assert.ok(await sheet.locator('.vrow').count() > 0, 'picker became blank after scrolling')
+  assert.notEqual(await sheet.locator('.vrow .t').first().innerText(), before)
+  assert.equal(await page.locator('.view').evaluate(el => el.scrollTop), background)
+  await sheet.getByRole('button', { name: 'Cancel', exact: true }).tap()
+  await sheet.waitFor({ state: 'detached', timeout: 2000 })
+})
+await test('playlist picker: adding songs saves, deduplicates and reports only new songs', async () => {
+  const openPicker = async () => { await page.locator('.pd-nav button[aria-label="More"]').tap(); await glass('Add songs'); await page.locator('.sheet').waitFor() }
+  await openPicker()
+  await page.locator('.sheet input[type=search]').fill('Aurora 0')
+  await page.locator('.sheet .vrow button').first().tap()
+  await page.locator('.sheet .nav button.right').tap()
+  await page.locator('.sheet').waitFor({ state: 'detached' })
+  const count = await page.locator('.song-row').count()
+  await openPicker()
+  await page.locator('.sheet input[type=search]').fill('Aurora 0')
+  await page.locator('.sheet .vrow button').first().tap()
+  await page.locator('.sheet .nav button.right').tap()
+  await page.locator('.sheet').waitFor({ state: 'detached' })
+  assert.equal(await page.locator('.song-row').count(), count)
+  assert.match(await page.locator('.toast').innerText(), /Added 0/)
+})
+await test('playlist artwork: replacing an existing custom image refreshes the hero immediately', async () => {
+  for (const color of ['#264b80', '#814125']) {
+    await page.locator('.pd-nav button[aria-label="More"]').tap(); await glass('Edit image')
+    const data = await page.evaluate(color => {
+      const c = document.createElement('canvas'); c.width = 64; c.height = 64
+      const ctx = c.getContext('2d'); ctx.fillStyle = color; ctx.fillRect(0, 0, 64, 64)
+      return c.toDataURL('image/png').split(',')[1]
+    }, color)
+    const previous = await page.locator('.pd-hero-img').count() ? await page.locator('.pd-hero-img').getAttribute('src') : null
+    const chooser = page.waitForEvent('filechooser')
+    await page.getByRole('menuitem', { name: 'Choose photo…', exact: true }).tap()
+    await (await chooser).setFiles({ name: 'cover.png', mimeType: 'image/png', buffer: Buffer.from(data, 'base64') })
+    await page.waitForFunction(previous => {
+      const image = document.querySelector('.pd-hero-img')
+      return image && image.getAttribute('src') !== previous && image.complete && image.naturalWidth > 0
+    }, previous)
+  }
+})
+await test('playlist search: no matches disables playback; hiding search restores songs', async () => {
+  await page.locator('.pd-actions button[aria-label="Search this playlist"]').tap()
+  await page.locator('.pl-search input').fill('no-matching-song-xyz')
+  await page.setViewportSize({ width: 320, height: 568 })
+  assert.equal(await page.locator('.view').evaluate(el => el.scrollWidth > el.clientWidth), false, 'search overflows a small phone')
+  await page.setViewportSize({ width: 390, height: 844 })
+  assert.equal(await page.locator('.song-row').count(), 0)
+  assert.ok(await page.locator('.pd-play').isDisabled())
+  assert.ok(await page.locator('.pd-actions button[aria-label="Shuffle"]').isDisabled())
+  await page.locator('.pd-actions button[aria-label="Search this playlist"]').tap()
+  assert.ok(await page.locator('.song-row').count() > 0)
+})
+await test('grid view switches to rows when rearranging; selection toolbar replaces mini player', async () => {
+  await page.locator('.pd-nav button[aria-label="More"]').tap(); await glass('Grid')
+  assert.ok(await page.locator('.pd-list.pl-grid').count())
+  await page.locator('.pd-nav button[aria-label="More"]').tap(); await glass('Rearrange songs')
+  assert.equal(await page.locator('.pd-list.pl-grid').count(), 0)
+  assert.ok(await page.locator('.handle').count() > 1)
+  await page.locator('.pd-nav button[aria-label="Done"]').tap()
+  await page.locator('.pd-nav button[aria-label="More"]').tap(); await glass('Select')
+  assert.equal(await page.locator('.mini').isVisible(), false)
+  const bar = await page.locator('.action-bar').boundingBox(), nav = await page.locator('.tabbar').boundingBox()
+  assert.ok(bar.y + bar.height <= nav.y)
+  await page.locator('.pd-nav button[aria-label="Back"]').tap()
+  assert.ok(await page.locator('.mini').isVisible())
+})
+await test('bottom navigation: fits small phones, safe areas, landscape and desktop; stays docked while scrolling', async () => {
+  for (const [width, height, safe] of [[320, 568, 0], [390, 844, 34], [440, 956, 34], [844, 390, 21], [1280, 800, 0]]) {
+    await page.setViewportSize({ width, height })
+    await page.evaluate(safe => { document.documentElement.style.setProperty('--safe-b', `${safe}px`); document.documentElement.style.setProperty('--safe-t', safe ? '47px' : '0px') }, safe)
+    await page.locator('.view').evaluate(el => { el.scrollTop = 0 })
+    const topNav = await page.locator('.pd-nav-inner').boundingBox()
+    assert.equal(topNav.y, (safe ? 47 : 0) + 10, 'safe-area top was counted twice')
+    const box = await page.locator('.tabbar').boundingBox(), mini = await page.locator('.mini').boundingBox()
+    assert.equal(box.x, 0); assert.equal(box.width, width); assert.equal(box.y + box.height, height)
+    assert.ok(box.height <= 56 + safe)
+    assert.ok(mini.y + mini.height <= box.y, 'mini player overlaps navigation')
+    for (const button of await page.locator('.tabbar button').all()) {
+      const b = await button.boundingBox(); assert.ok(b.width >= 44 && b.height >= 44)
+      assert.ok(b.x >= 0 && b.x + b.width <= width)
+    }
+    assert.ok(await page.locator('.pl-search').count() === 0)
+    await page.locator('.view').evaluate(el => { el.scrollTop = el.scrollHeight })
+    assert.deepEqual(await page.locator('.tabbar').boundingBox(), box)
+    assert.equal(await page.locator('.view').evaluate(el => el.scrollWidth > el.clientWidth), false)
+    if (width === 390) {
+      const summary = await page.locator('.pd-summary').boundingBox()
+      assert.ok(summary.y + summary.height <= mini.y, 'last playlist content hidden behind player')
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.evaluate(() => { document.documentElement.style.removeProperty('--safe-b'); document.documentElement.style.removeProperty('--safe-t') })
+})
 await test('no uncaught page errors', async () => { assert.deepEqual(errors, []) })
 
-for (const [r, n] of results) console.log(r, n)
 const failed = results.filter(r => r[0] === 'FAIL').length
 console.log(`\n${results.length - failed}/${results.length} passed`)
 await browser.close(); process.exit(failed ? 1 : 0)

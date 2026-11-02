@@ -32,3 +32,8 @@
 | T063 | Playlists redesign UI + glass menus + queue re-planning | claude | done |
 | T070-T072 | DSP worker, resilient fetch, translations | codex | done |
 | T073 | Performance/UX overhaul | claude | done |
+| T074 | Fix playlist creation/editing, one-tap sheet dismissal, phone navigation and scrolling | codex | review |
+
+## T074 scope
+- Paths: `src/ui/App.tsx`, `src/ui/Playlists.tsx`, `src/ui/Glass.tsx`, `src/ui/overlay.ts`, `src/ui/common.tsx`, `src/ui/VirtualList.tsx`, `src/ui/Player.tsx`, `src/ui/styles.css`, `tests/overlay.test.ts`, `tests/sheet.test.ts`, `scripts/e2e.mjs`, `TASKS.md`, `HANDOFF.md`.
+- Reproduce the reported phone layout and dismissal bugs, fix playlist flows and add regression coverage. No dependency changes; Claude merges.

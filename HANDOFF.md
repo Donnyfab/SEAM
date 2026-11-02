@@ -26,3 +26,12 @@
 - The existing bottom tab bar is now the floating glass pill (accent #ff375f, `--tab-h` is 88px so the mini player/action bar sit above it) with a `.tab-fade` gradient.
 - Removed: artwork-reactive glass on the detail (`glass-page`, `detail-hero`, `playlistPalette`, `Cover big`); the detail's Play-next button (still in the More menu). Now Playing still uses `useGlow`.
 - e2e/a11y/bench/shots scripts updated to the new selectors; e2e 21/21.
+
+## Done: T074 playlist/navigation fixes (2026-11-02)
+- Branch `codex/t074-playlist-navigation`, ready for Claude to merge. GitHub main and the playlist redesign branch both matched local base `fc2af70` when checked.
+- Replaced the floating pill with a 56px bottom-docked tab bar plus the device safe area; corrected mini-player spacing, selection-toolbar overlap, narrow search fields and double-counted header safe area. Replaced the emoji Next icon with SVG.
+- Reproduced Add songs at 4,301px tall on a 390×844 viewport. Portaled playlist sheets and glass overlays outside page animations; removed persistent page transform/stacking effects. Picker now measures 390×844 and virtualizes against its own sheet scroller, including deep scrolling through 3,000 songs.
+- Fixed one-tap Now Playing Close (the drag handler previously captured the button's tap); added drag threshold, cancellation and timer cleanup. Backdrop pointer state is isolated and cancelled safely.
+- Closing search clears its filter; empty search results disable playback. Rearrange switches grid to rows. Custom artwork replacement refreshes immediately; Add songs counts only new entries.
+- Verification: `npm test` 509/509, `npm run typecheck`, `npm run build`, `npm run e2e -- http://127.0.0.1:4183/` 29/29; a11y script reports 0 issues. Tested Chromium touch at 320×568, 390×844, 440×956, 844×390 and 1280×800 with simulated top/bottom safe areas. Screenshots inspected; no framework overlay or page/console errors. Browser plugin absent; used the existing Playwright workflow without adding dependencies. Real iPhone Safari/PWA and keyboard/background-audio behavior remain unverified. Existing Book.tsx static/dynamic import build warning remains.
+- Not merged, pushed or deployed; owner/Claude retains merge ownership.

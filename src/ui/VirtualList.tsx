@@ -3,7 +3,7 @@ import type { ComponentChild } from 'preact'
 import { computeWindow, type VirtualWindow } from './virtual'
 
 /**
- * Renders only the rows near the viewport of the nearest `.view` scroller. Rows must share one fixed height.
+ * Renders only the rows near the viewport of the nearest page or sheet scroller. Rows must share one fixed height.
  * Keeps the DOM small (tens of nodes instead of tens of thousands) so scrolling and tab switches stay fast on phones.
  */
 export function VirtualList<T>({ items, rowHeight = 64, overscan = 8, keyOf, render }: { items: readonly T[]; rowHeight?: number; overscan?: number; keyOf: (x: T) => string; render: (x: T, i: number) => ComponentChild }) {
@@ -19,7 +19,7 @@ export function VirtualList<T>({ items, rowHeight = 64, overscan = 8, keyOf, ren
     setWin(w => (w.first === next.first && w.last === next.last && w.padBottom === next.padBottom ? w : next))
   }
 
-  useLayoutEffect(() => { scroller.current = host.current?.closest('.view') as HTMLElement | null; measure() }, [items.length, rowHeight])
+  useLayoutEffect(() => { scroller.current = host.current?.closest<HTMLElement>('.sheet, .view') ?? null; measure() }, [items.length, rowHeight])
   useEffect(() => {
     const sc = scroller.current; if (!sc) return
     let raf = 0
