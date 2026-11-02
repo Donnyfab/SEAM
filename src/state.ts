@@ -282,7 +282,7 @@ export async function enqueue(list: StoredTrack[], where: 'next' | 'later') {
   ids.splice(at, 0, ...list.map(t => t.id))
   queueIds.value = ids
   e.insertItems(list.map(toPlayItem), where)
-  notify(translate(where === 'next' ? 'Playing next: {count} songs' : 'Added {count} songs to the queue', { count: list.length }))
+  notify(translate(where === 'next' ? 'playingNextSongs' : 'queuedSongs', { count: list.length }))
 }
 
 export async function setPlaylistArtwork(id: string, file: Blob) { await setArtwork(`pl:${id}`, file); await updatePlaylist(id, { customArt: true }) }

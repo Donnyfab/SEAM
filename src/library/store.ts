@@ -10,8 +10,8 @@ const docsDB: UseStore = createStore('seam-docs', 'kv')
 export interface StoredTrack extends Track { fingerprint?: string; fileName?: string; sampleRate?: number; codec?: string; lufs?: number; peak?: number; kind?: 'music' | 'audiobook'; lyrics?: string; comment?: string }
 export interface Playlist { id: string; name: string; trackIds: string[]; updatedAt: number; createdAt?: number; archived?: boolean; customArt?: boolean }
 import { defaultFx, type FxSettings } from '../audio/presets'
-export interface Settings { language: 'auto' | 'en' | 'es' | 'fr' | 'de'; crossfade: number; repeat: 'off' | 'all' | 'one'; fx: FxSettings; normalize: boolean; targetLufs: number; bookRate: number; skipBack: number; skipForward: number; visualizer: 'bars' | 'wave' | 'radial' | 'off'; textScale: number; reduceMotion: boolean; highContrast: boolean; lockAfter: number }
-export const defaultSettings: Settings = { language: 'auto', crossfade: 0, repeat: 'off', fx: defaultFx, normalize: false, targetLufs: -14, bookRate: 1, skipBack: 15, skipForward: 30, visualizer: 'bars', textScale: 1, reduceMotion: false, highContrast: false, lockAfter: 60 }
+export interface Settings { language: 'auto' | 'en' | 'es' | 'fr' | 'de'; crossfade: number; repeat: 'off' | 'all' | 'one'; fx: FxSettings; normalize: boolean; targetLufs: number; bookRate: number; skipBack: number; skipForward: number; visualizer: 'bars' | 'wave' | 'radial' | 'off'; textScale: number; reduceMotion: boolean; highContrast: boolean; lockAfter: number; playlistView: 'grid' | 'list'; playlistSortKey: 'name' | 'created' | 'updated' | 'duration' | 'count'; playlistSortDir: 'asc' | 'desc' }
+export const defaultSettings: Settings = { language: 'auto', crossfade: 0, repeat: 'off', fx: defaultFx, normalize: false, targetLufs: -14, bookRate: 1, skipBack: 15, skipForward: 30, visualizer: 'bars', textScale: 1, reduceMotion: false, highContrast: false, lockAfter: 60, playlistView: 'grid', playlistSortKey: 'updated', playlistSortDir: 'desc' }
 
 export async function loadTracks(): Promise<StoredTrack[]> {
   const ks = await keys(tracksDB)

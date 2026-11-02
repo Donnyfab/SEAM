@@ -55,7 +55,7 @@ function AddTracks({ onAdd, onClose }: { onAdd: (ids: string[]) => void; onClose
   return (
     <div class="sheet">
       <div class="nav" style={{ margin: '-12px -24px 8px', position: 'sticky' }}><button class="side" onClick={onClose}>{translate("Cancel")}</button><h1>{translate("Add songs")}</h1><button class="side right" disabled={!pick.length} onClick={() => { onAdd(pick); onClose() }}>{translate("Add ")}{pick.length || ''}</button></div>
-      {!tracks.value.length && <div class="empty">{translate("Import music in Files first.")}</div>}
+      {!tracks.value.length && <div class="empty">{translate("Import music first: Library › Import & storage.")}</div>}
       <div class="group" style={{ margin: 0 }}>{tracks.value.map(t => (
         <button class={`row${pick.includes(t.id) ? ' active' : ''}`} onClick={() => setPick(p => (p.includes(t.id) ? p.filter(x => x !== t.id) : [...p, t.id]))}>
           <Art id={t.id} /><div class="grow"><div class="t">{t.title}</div><div class="s">{t.artist} · {fmt(t.duration)}</div></div><span>{pick.includes(t.id) ? `✓ ${pick.indexOf(t.id) + 1}` : ''}</span>

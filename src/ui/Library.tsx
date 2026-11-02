@@ -4,10 +4,11 @@ import { signal } from '@preact/signals'
 import { bookmarks, bookState, createPlaylist, deletePlaylist, engineState, playBook, playBookmark, playTracks, playlists, positions, queueIds, removeBookmark, removeTrack, toggleFavorite, tracks, trackById, updatePlaylist, updateTrack, notify, shuffle } from '../state'
 import { groupAlbums, groupArtists, groupGenres, recents, searchTracks, sortTracks, unplayed, type Track, type TrackGroup } from '../library/model'
 import { EditTrack } from './Edit'
+import { Files } from './Files'
 import { exportWithTags } from '../library/exportTags'
 import { ActionMenu, Art, fmt, type MenuItem } from './common'
 
-type Page = { kind: 'root' } | { kind: 'songs' | 'favorites' | 'recents' | 'unplayed' | 'albums' | 'artists' | 'genres' | 'playlists' | 'audiobooks' | 'bookmarks' } | { kind: 'group'; title: string; ids: string[] } | { kind: 'playlist'; id: string }
+type Page = { kind: 'root' } | { kind: 'songs' | 'favorites' | 'recents' | 'unplayed' | 'albums' | 'artists' | 'genres' | 'playlists' | 'audiobooks' | 'bookmarks' | 'files' } | { kind: 'group'; title: string; ids: string[] } | { kind: 'playlist'; id: string }
 const stack = signal<Page[]>([{ kind: 'root' }])
 const push = (p: Page) => { stack.value = [...stack.value, p] }
 const pop = () => { if (stack.value.length > 1) stack.value = stack.value.slice(0, -1) }
@@ -16,8 +17,9 @@ const ROOT: { kind: Exclude<Page['kind'], 'root' | 'group' | 'playlist'>; label:
   { kind: 'favorites', label: 'Favorites', icon: '♥', color: '#ff375f' }, { kind: 'recents', label: 'Recents', icon: '◷', color: '#0a84ff' },
   { kind: 'songs', label: 'Songs', icon: '♪', color: '#ff9f0a' }, { kind: 'unplayed', label: 'Unplayed', icon: '✦', color: '#30d158' },
   { kind: 'albums', label: 'Albums', icon: '▤', color: '#5e5ce6' }, { kind: 'artists', label: 'Artists', icon: '☺', color: '#bf5af2' },
-  { kind: 'genres', label: 'Genres', icon: '♬', color: '#64d2ff' }, { kind: 'playlists', label: 'Playlists', icon: '☰', color: '#ff453a' },
+  { kind: 'genres', label: 'Genres', icon: '♬', color: '#64d2ff' },
   { kind: 'audiobooks', label: 'Audiobooks', icon: '📖', color: '#8e6f4e' }, { kind: 'bookmarks', label: 'Bookmarks', icon: '🔖', color: '#ffd60a' },
+  { kind: 'files', label: 'Import & storage', icon: '⤓', color: '#0a84ff' },
 ]
 
 function SongRow({ t, list, i }: { t: Track; list: Track[]; i: number }) {
@@ -135,10 +137,11 @@ export function Library() {
           <div class="group">{ROOT.map(r => (
             <button class="row" onClick={() => push({ kind: r.kind })}><span class="icon" style={{ background: r.color }}>{r.icon}</span><div class="grow t">{translate(r.label)}</div>
               <span class="s">{r.kind === 'songs' ? all.length : r.kind === 'playlists' ? playlists.value.length : r.kind === 'favorites' ? all.filter(t => t.favorite).length : r.kind === 'audiobooks' ? everything.length - all.length : r.kind === 'bookmarks' ? bookmarks.value.length : ''}</span><span class="chev">›</span></button>))}</div>
-          {!all.length && <div class="empty">{translate("Your library is empty.")}<br />{translate("Go to Files to import music from your iPhone or iCloud Drive.")}</div>}
+          {!all.length && <div class="empty">{translate("Your library is empty.")}<br />{translate("Import music from your iPhone or iCloud Drive.")}<div style={{ marginTop: 16 }}><button class="btn" onClick={() => push({ kind: 'files' })}>{translate("Import music…")}</button></div></div>}
         </>)
       break
     case 'audiobooks': title = translate("Audiobooks"); body = <Books />; break
+    case 'files': title = translate('Import & storage'); body = <Files />; break
     case 'bookmarks': title = translate("Bookmarks"); body = <BookmarkList />; break
     case 'songs': title = translate("Songs"); body = <Songs list={all} />; break
     case 'favorites': title = translate("Favorites"); body = <Songs list={all.filter(t => t.favorite)} />; break
