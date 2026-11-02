@@ -18,3 +18,11 @@
 | T033 | Backup/restore, passcode, accessibility pass | claude | todo |
 | T034 | Deploy to GitHub Pages | claude | done — https://donnyfab.github.io/SEAM/ |
 | T035 | Studio: flag clips whose song was deleted in the UI (export now refuses with a message); engine position() with repeat-one overlap | claude | todo |
+| T022-T025 | WebDAV, Jellyfin, Last.fm, passcode/playlist/backup utils | codex | done |
+| T040 | PKCE + Dropbox/Drive/OneDrive clients | codex | done |
+| T043 | MP3/FLAC tag writer | codex | done |
+| T036 | Audiobooks, bookmarks, resume, editor, visualizer | claude | done |
+| T031 | Connect tab + cloud OAuth wiring | claude | done |
+| T033 | Backup/restore, passcode, Last.fm, accessibility | claude | done |
+| T050 | Localization (en/es/fr/de) | codex | doing |
+| T051 | Studio: flag deleted clips; 24-bit export option; M4A tag writing | claude/codex | todo |
