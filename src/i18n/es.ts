@@ -446,6 +446,21 @@ export const es: Record<string, string> = {
   "24-bit (studio)": "24 bits (estudio)",
   "32-bit float (lossless)": "32 bits flotante (sin pérdida)",
   "{bits}-bit, rendered offline with exact timing": "{bits} bits, renderizado sin conexión con tiempos exactos",
-  "Song deleted from library": "Canción eliminada de la biblioteca"
+  "Song deleted from library": "Canción eliminada de la biblioteca",
+  "Back online": "Conexión restablecida",
+  "Could not save your changes. Storage may be full.": "No se han podido guardar los cambios. Puede que el almacenamiento esté lleno.",
+  "Deleted “{name}”": "Se ha eliminado “{name}”",
+  "Deleted “{title}”": "Se ha eliminado “{title}”",
+  "Reload app": "Volver a cargar la app",
+  "Something went wrong": "Se ha producido un error",
+  "This screen could not be loaded. Check your connection and try again.": "No se ha podido cargar esta pantalla. Comprueba la conexión e inténtalo de nuevo.",
+  "Try again": "Reintentar",
+  "Undo": "Deshacer",
+  "You are offline. Your downloaded library still plays; servers and cloud sources need a connection.": "Sin conexión. Puedes seguir reproduciendo la música descargada de tu biblioteca; los servidores y las fuentes en la nube necesitan conexión.",
+  "Your music and playlists are safe. You can try this screen again or reload the app.": "Tu música y tus listas están a salvo. Puedes volver a intentar cargar esta pantalla o volver a cargar la app.",
+  "deletedPlaylists_one": "Se ha eliminado {count} lista",
+  "deletedPlaylists_other": "Se han eliminado {count} listas",
+  "removedFromPlaylist_one": "Se ha quitado {count} canción de la lista",
+  "removedFromPlaylist_other": "Se han quitado {count} canciones de la lista"
 }
 export default es

@@ -446,6 +446,21 @@ export const de: Record<string, string> = {
   "24-bit (studio)": "24 Bit (Studio)",
   "32-bit float (lossless)": "32 Bit Float (verlustfrei)",
   "{bits}-bit, rendered offline with exact timing": "{bits} Bit, offline mit exaktem Timing gerendert",
-  "Song deleted from library": "Song aus der Mediathek gelöscht"
+  "Song deleted from library": "Song aus der Mediathek gelöscht",
+  "Back online": "Wieder online",
+  "Could not save your changes. Storage may be full.": "Deine Änderungen konnten nicht gesichert werden. Möglicherweise ist der Speicher voll.",
+  "Deleted “{name}”": "„{name}“ gelöscht",
+  "Deleted “{title}”": "„{title}“ gelöscht",
+  "Reload app": "App neu laden",
+  "Something went wrong": "Ein Fehler ist aufgetreten",
+  "This screen could not be loaded. Check your connection and try again.": "Diese Ansicht konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
+  "Try again": "Erneut versuchen",
+  "Undo": "Widerrufen",
+  "You are offline. Your downloaded library still plays; servers and cloud sources need a connection.": "Du bist offline. Heruntergeladene Musik in deiner Mediathek kannst du weiterhin abspielen. Server und Cloud-Quellen benötigen eine Verbindung.",
+  "Your music and playlists are safe. You can try this screen again or reload the app.": "Deine Musik und Wiedergabelisten sind sicher. Du kannst diese Ansicht erneut laden oder die App neu laden.",
+  "deletedPlaylists_one": "{count} Wiedergabeliste gelöscht",
+  "deletedPlaylists_other": "{count} Wiedergabelisten gelöscht",
+  "removedFromPlaylist_one": "{count} Song aus der Wiedergabeliste entfernt",
+  "removedFromPlaylist_other": "{count} Songs aus der Wiedergabeliste entfernt"
 }
 export default de

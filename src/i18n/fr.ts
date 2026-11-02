@@ -446,6 +446,21 @@ export const fr: Record<string, string> = {
   "24-bit (studio)": "24 bits (studio)",
   "32-bit float (lossless)": "32 bits flottant (sans perte)",
   "{bits}-bit, rendered offline with exact timing": "{bits} bits, rendu hors ligne avec un minutage exact",
-  "Song deleted from library": "Morceau supprimé de la bibliothèque"
+  "Song deleted from library": "Morceau supprimé de la bibliothèque",
+  "Back online": "Connexion rétablie",
+  "Could not save your changes. Storage may be full.": "Impossible d’enregistrer vos modifications. L’espace de stockage est peut-être plein.",
+  "Deleted “{name}”": "« {name} » supprimé",
+  "Deleted “{title}”": "« {title} » supprimé",
+  "Reload app": "Recharger l’app",
+  "Something went wrong": "Une erreur s’est produite",
+  "This screen could not be loaded. Check your connection and try again.": "Impossible de charger cet écran. Vérifiez votre connexion et réessayez.",
+  "Try again": "Réessayer",
+  "Undo": "Annuler",
+  "You are offline. Your downloaded library still plays; servers and cloud sources need a connection.": "Vous êtes hors ligne. Vous pouvez toujours écouter les morceaux téléchargés de votre bibliothèque ; les serveurs et les sources dans le cloud nécessitent une connexion.",
+  "Your music and playlists are safe. You can try this screen again or reload the app.": "Votre musique et vos playlists sont en sécurité. Vous pouvez réessayer de charger cet écran ou recharger l’app.",
+  "deletedPlaylists_one": "{count} playlist supprimée",
+  "deletedPlaylists_other": "{count} playlists supprimées",
+  "removedFromPlaylist_one": "{count} morceau retiré de la playlist",
+  "removedFromPlaylist_other": "{count} morceaux retirés de la playlist"
 }
 export default fr
