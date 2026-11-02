@@ -59,7 +59,7 @@ export function App() {
   }, [])
   useEffect(() => {
     const r = document.documentElement, st = settings.value
-    r.style.fontSize = `${16 * st.textScale}px`
+    r.style.fontSize = `${17 * st.textScale}px`
     r.classList.toggle('reduce-motion', st.reduceMotion); r.classList.toggle('high-contrast', st.highContrast)
   }, [settings.value.textScale, settings.value.reduceMotion, settings.value.highContrast])
   useLayoutEffect(() => {

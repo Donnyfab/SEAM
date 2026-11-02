@@ -1,11 +1,4 @@
 import { useLayoutEffect, useRef } from 'preact/hooks'
-import type { ComponentChildren } from 'preact'
-import { createPortal } from 'preact/compat'
-
-/** Keep fixed overlays outside animated, scrolling and paint-contained page ancestors. */
-export function OverlayPortal({ children }: { children: ComponentChildren }) {
-  return createPortal(children, document.body)
-}
 
 /**
  * Shared behaviour for every overlay (menus, sheets, dialogs): a stack so only the topmost one reacts to
@@ -71,12 +64,10 @@ export function useOverlay(ref: { current: HTMLElement | null }, onClose: () => 
  * Props for a dismissing backdrop: only a press that both starts and ends on the backdrop closes it, so
  * dragging a text selection out of a dialog or finishing a swipe over it never dismisses by accident.
  */
+let pressedOnScrim = false
 export function scrimProps(onClose: () => void) {
-  // Each mounted backdrop owns its gesture; another overlay cannot consume it.
-  let pressedOnScrim = false
   return {
     onPointerDown: (e: PointerEvent) => { pressedOnScrim = e.target === e.currentTarget },
-    onPointerCancel: () => { pressedOnScrim = false },
     onClick: (e: MouseEvent) => { const ok = pressedOnScrim || e.detail === 0; pressedOnScrim = false; if (e.target === e.currentTarget && ok) onClose() },
   }
 }

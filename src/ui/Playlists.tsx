@@ -14,7 +14,6 @@ import { Icon } from './Icon'
 import { EditTrack } from './Edit'
 import { useSortable } from './useSortable'
 import { VirtualList } from './VirtualList'
-import { OverlayPortal } from './overlay'
 
 type View = { kind: 'list' } | { kind: 'detail'; id: string }
 const view = signal<View>({ kind: 'list' })
@@ -36,7 +35,7 @@ const durationOf = (p: Playlist) => playlistDuration(p, trackById.value)
 function Cover({ p, size }: { p: Playlist; size?: number }) {
   const [host, seen] = useInView<HTMLDivElement>()
   const [urls, setUrls] = useState<{ custom: string | null; arts: string[] }>({ custom: null, arts: [] })
-  const key = `${p.id}|${p.updatedAt}|${p.customArt ? 1 : 0}|${p.trackIds.slice(0, 8).join(',')}`
+  const key = `${p.id}|${p.customArt ? 1 : 0}|${p.trackIds.slice(0, 8).join(',')}`
   useEffect(() => {
     if (!seen) return
     let live = true
@@ -63,7 +62,7 @@ function Cover({ p, size }: { p: Playlist; size?: number }) {
 /** Full-size cover for the detail hero: the custom image, else the first song that has artwork. */
 function useHeroCover(p: Playlist | undefined): string | null {
   const [url, setUrl] = useState<string | null>(null)
-  const key = p ? `${p.id}|${p.updatedAt}|${p.customArt ? 1 : 0}|${p.trackIds.slice(0, 8).join(',')}` : ''
+  const key = p ? `${p.id}|${p.customArt ? 1 : 0}|${p.trackIds.slice(0, 8).join(',')}` : ''
   useEffect(() => {
     if (!p) return
     let live = true
@@ -244,7 +243,7 @@ function PlaylistList() {
           : <button class="circle-btn" aria-label={translate('More')} onClick={() => setMenu('more')}><Icon name="dots" /></button>}
       </div>
       <div class="ctl-row">
-        <button aria-label={translate('Search')} onClick={() => { setSearching(s => !s); setQ('') }}><Icon name="search" /></button>
+        <button aria-label={translate('Search')} onClick={() => setSearching(s => !s)}><Icon name="search" /></button>
         <button aria-label={translate('Play all')} disabled={!allTracks.length} onClick={() => playAll(allTracks)}><Icon name="play" fill /></button>
         <button aria-label={translate('Shuffle')} disabled={!allTracks.length} onClick={() => playShuffled(allTracks)}><Icon name="shuffle" /></button>
       </div>
@@ -274,7 +273,7 @@ function PlaylistList() {
       {menu === 'plus' && <GlassMenu items={plusItems} anchor="left" onClose={() => setMenu(null)} />}
       {menu === 'more' && <GlassMenu items={moreItems} anchor="right" onClose={() => setMenu(null)} />}
       {sheet && <GlassSheet title={sheet.name} subtitle={durationLabel(durationOf(sheet))} items={rowItems(sheet)} onClose={() => setSheet(null)} />}
-      {help && <OverlayPortal><HelpSheet onClose={() => setHelp(false)} /></OverlayPortal>}
+      {help && <HelpSheet onClose={() => setHelp(false)} />}
     </>
   )
 }
@@ -307,7 +306,7 @@ function PlaylistDetail({ id }: { id: string }) {
   }, [p?.trackIds.join(','), q, sort, tracks.value])
   const manual = sort === 'manual' && !q
   const sortable = useSortable({ count: shown.length, handleSelector: '.handle', onMove: (from, to) => { if (p && manual) void updatePlaylist(p.id, { trackIds: moveItem(p.trackIds, from, to) }) } })
-  useEffect(() => { if (!rearrange) return; setSort('manual'); setQ(''); setSearching(false); setGrid(false) }, [rearrange])
+  useEffect(() => { if (!rearrange) return; setSort('manual'); setQ(''); setSearching(false) }, [rearrange])
   useEffect(() => { const r = document.documentElement; r.classList.add('pd-on'); return () => r.classList.remove('pd-on') }, [])
   if (!p) return <div class="empty">{translate('Playlist deleted.')}</div>
 
@@ -352,8 +351,7 @@ function PlaylistDetail({ id }: { id: string }) {
         {selecting && <span class={`sel-circle${on ? ' on' : ''}`}><Icon name={on ? 'checkCircle' : 'circle'} /></span>}
         <button class="main" onClick={playHere}>
           <Thumb id={x.id} />
-          <span class="pd-text"><span class="st">{x.title}</span><span class="ss">{x.artist}</span></span>
-          <span class="pd-duration">{fmt(x.duration)}</span>
+          <span class="pd-text"><span class="st">{x.title}</span><span class="ss">{fmt(x.duration)}</span></span>
         </button>
         {rearrange && manual ? <span class="handle" aria-label={translate('Reorder {title}', { title: x.title })} role="button" tabIndex={0}><Icon name="list" /></span>
           : !selecting && <button class="more" aria-label={translate('More options for {title}', { title: x.title })} onClick={() => setRowSheet(x)}><Icon name="dots" size={20} /></button>}
@@ -375,15 +373,15 @@ function PlaylistDetail({ id }: { id: string }) {
             </div>}
         </div>
       </div>
-      <header class={`pd-hero${cover ? '' : ' no-cover'}`}>
+      <header class="pd-hero">
         {cover ? <img class="pd-hero-img" src={cover} alt="" /> : <div class="pd-hero-fallback" />}
         <div class="pd-hero-fade" aria-hidden="true" />
       </header>
       <div class="pd-title"><h1>{p.name}</h1><div class="pd-kind">{translate('Playlist')}</div></div>
       <div class="pd-actions">
-        <button class="pd-round" aria-label={translate('Shuffle')} disabled={!shown.length} onClick={() => playShuffled(shown)}><Icon name="shuffle" size={21} /></button>
-        <button class="pd-play" aria-label={translate('Play all')} disabled={!shown.length} onClick={() => playAll(shown)}><Icon name="play" size={17} fill />{translate('Play')}</button>
-        <button class="pd-round" aria-label={translate('Search this playlist')} aria-pressed={searching} onClick={() => { setSearching(s => !s); setQ('') }}><Icon name="search" size={21} /></button>
+        <button class="pd-round" aria-label={translate('Shuffle')} disabled={!all.length} onClick={() => playShuffled(shown)}><Icon name="shuffle" size={21} /></button>
+        <button class="pd-play" aria-label={translate('Play all')} disabled={!all.length} onClick={() => playAll(shown)}><Icon name="play" size={17} fill />{translate('Play')}</button>
+        <button class="pd-round" aria-label={translate('Search this playlist')} aria-pressed={searching} onClick={() => setSearching(s => !s)}><Icon name="search" size={21} /></button>
       </div>
       {searching && <div class="pl-search"><Icon name="search" size={18} /><input autofocus type="search" enterkeyhint="search" onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setSearching(false); setQ('') } else if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} placeholder={translate('Search this playlist')} value={q} onInput={e => setQ((e.target as HTMLInputElement).value)} /><button aria-label={translate('Cancel')} onClick={() => { setSearching(false); setQ('') }}>✕</button></div>}
       {sort !== 'manual' && <div class="hint" style={{ margin: '0 16px 8px' }}>{translate('Sorted view — choose Sort › Playlist order to rearrange.')}</div>}
@@ -407,8 +405,8 @@ function PlaylistDetail({ id }: { id: string }) {
       {menu && <GlassMenu items={items} anchor="right" onClose={() => setMenu(false)} />}
       {share && <GlassMenu items={exportItems(p)} anchor="right" onClose={() => setShare(false)} />}
       {rowSheet && <GlassSheet title={rowSheet.title} subtitle={rowSheet.artist} items={songItems(rowSheet)} onClose={() => setRowSheet(null)} />}
-      {adding && <OverlayPortal><TrackPicker title={translate('Add songs')} onDone={ids => { const added = ids.filter(i => !p.trackIds.includes(i)); void updatePlaylist(p.id, { trackIds: [...p.trackIds, ...added] }); notify(translate('addedSongs', { count: added.length })) }} onClose={() => setAdding(false)} /></OverlayPortal>}
-      {edit && <OverlayPortal><EditTrack id={edit} onClose={() => setEdit(null)} /></OverlayPortal>}
+      {adding && <TrackPicker title={translate('Add songs')} onDone={ids => { void updatePlaylist(p.id, { trackIds: [...p.trackIds, ...ids.filter(i => !p.trackIds.includes(i))] }); notify(translate('addedSongs', { count: ids.length })) }} onClose={() => setAdding(false)} />}
+      {edit && <EditTrack id={edit} onClose={() => setEdit(null)} />}
     </div>
   )
 }
@@ -418,5 +416,5 @@ export function Playlists() {
   useEdgeSwipeBack(v.kind === 'detail' ? back : null)
   // a deleted playlist must not leave the user on a dead screen
   useEffect(() => { if (v.kind === 'detail' && !playlists.value.some(p => p.id === v.id)) back() }, [playlists.value.length])
-  return <div key={v.kind === 'detail' ? v.id : 'list'} class="playlist-page">{v.kind === 'list' ? <PlaylistList /> : <PlaylistDetail id={v.id} />}</div>
+  return <div key={v.kind === 'detail' ? v.id : 'list'} style={{ animation: 'rise .28s cubic-bezier(.2,.8,.2,1) both' }}>{v.kind === 'list' ? <PlaylistList /> : <PlaylistDetail id={v.id} />}</div>
 }
