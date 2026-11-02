@@ -1,3 +1,5 @@
+import { writeMp4Tags } from './mp4tags'
+
 export interface TagEdits {
   title?: string
   artist?: string
@@ -12,7 +14,7 @@ export interface TagEdits {
   artwork?: { data: Uint8Array; mime: string }
 }
 
-type WriteResult = { bytes: Uint8Array; format: 'mp3' | 'flac' } | { error: string }
+type WriteResult = { bytes: Uint8Array; format: 'mp3' | 'flac' | 'm4a' } | { error: string }
 
 function join(...parts: Uint8Array[]): Uint8Array {
   const result = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0))
@@ -148,11 +150,12 @@ export function writeTags(file: Uint8Array, edits: TagEdits): WriteResult {
     if (edits.artwork && (!edits.artwork.mime || /[^\x20-\x7e]/.test(edits.artwork.mime))) {
       throw new Error('Invalid artwork MIME type')
     }
+    if (isAt(file, 4, 'ftyp')) return writeMp4Tags(file, edits)
     if (isAt(file, 0, 'fLaC')) return { bytes: writeFlac(file, edits), format: 'flac' }
     if (isAt(file, 0, 'ID3') || (file[0] === 255 && ((file[1] ?? 0) & 224) === 224)) {
       return { bytes: writeMp3(file, edits), format: 'mp3' }
     }
-    return { error: 'Unsupported audio format (expected MP3 or FLAC)' }
+    return { error: 'Unsupported audio format (expected MP3, FLAC or MP4)' }
   } catch (error: unknown) {
     return { error: error instanceof Error ? error.message : 'Could not write tags' }
   }
