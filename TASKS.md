@@ -34,6 +34,7 @@
 | T073 | Performance/UX overhaul | claude | done |
 | T074 | Fix playlist creation/editing, one-tap sheet dismissal, phone navigation and scrolling | codex | done |
 | T075 | Compact Apple-inspired typography, playlist hierarchy and player chrome | codex | done |
+| T076 | Restore pre-Codex app changes while retaining the bottom navigation bar | codex | done |
 
 ## T074 scope
 - Paths: `src/ui/App.tsx`, `src/ui/Playlists.tsx`, `src/ui/Glass.tsx`, `src/ui/overlay.ts`, `src/ui/common.tsx`, `src/ui/VirtualList.tsx`, `src/ui/Player.tsx`, `src/ui/styles.css`, `tests/overlay.test.ts`, `tests/sheet.test.ts`, `scripts/e2e.mjs`, `TASKS.md`, `HANDOFF.md`.
@@ -42,3 +43,7 @@
 ## T075 scope
 - Paths: `src/ui/App.tsx`, `src/ui/Playlists.tsx`, `src/ui/Player.tsx`, `src/ui/VirtualList.tsx`, `src/ui/styles.css`, `scripts/e2e.mjs`, `AGENTS.md`, `TASKS.md`, `HANDOFF.md`.
 - Tighten the existing design system against the owner's two Apple Music reference images: smaller type, shorter hero/rows, lighter controls and dock. Preserve working flows, text scaling and 44px touch targets. No new dependencies or image assets; owner authorized agents to merge and deploy on 2026-11-02. Based on T074 so its fixes remain included.
+
+## T076 scope
+- Paths: `src/ui/App.tsx`, `src/ui/Glass.tsx`, `src/ui/Player.tsx`, `src/ui/Playlists.tsx`, `src/ui/VirtualList.tsx`, `src/ui/common.tsx`, `src/ui/overlay.ts`, `src/ui/styles.css`, `tests/overlay.test.ts`, `tests/sheet.test.ts`, `scripts/e2e.mjs`, `TASKS.md`, `HANDOFF.md`.
+- Owner requested reverting all prior Codex app changes except the navigation bar. Restore application source to `fc2af70`, retain the current bottom-docked navigation and its spacing token, replace superseded regression tests with rollback/navigation coverage. Preserve the owner's standing merge/deploy instruction. Commit a forward change; merge and deploy.

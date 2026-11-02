@@ -44,29 +44,22 @@ export async function saveBlob(blob: Blob, name: string) {
  */
 export function useSheet(onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null)
-  const drag = useRef<{ y: number; t: number; dy: number; pointerId: number; active: boolean } | null>(null)
-  const dismissTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  useEffect(() => () => clearTimeout(dismissTimer.current), [])
+  const drag = useRef<{ y: number; t: number; dy: number } | null>(null)
   useOverlay(ref, onClose)
   const grabProps = {
-    // Capturing on pointerdown retargets a tap away from the nested Close button.
-    onPointerDown: (e: PointerEvent) => { if (!e.isPrimary || e.button !== 0 || dismissTimer.current !== undefined) return; drag.current = { y: e.clientY, t: performance.now(), dy: 0, pointerId: e.pointerId, active: false } },
+    onPointerDown: (e: PointerEvent) => { drag.current = { y: e.clientY, t: performance.now(), dy: 0 }; (e.currentTarget as Element).setPointerCapture(e.pointerId); if (ref.current) ref.current.style.transition = 'none' },
     onPointerMove: (e: PointerEvent) => {
-      const d = drag.current; if (!d || !ref.current || e.pointerId !== d.pointerId) return
+      const d = drag.current; if (!d || !ref.current) return
       d.dy = Math.max(0, e.clientY - d.y)
-      if (!d.active && d.dy < 8) return
-      if (!d.active) { d.active = true; (e.currentTarget as Element).setPointerCapture(e.pointerId); ref.current.style.transition = 'none' }
       ref.current.style.transform = `translate3d(0, ${d.dy}px, 0)`
     },
-    onPointerUp: (e: PointerEvent) => {
-      if (e.pointerId !== drag.current?.pointerId) return
+    onPointerUp: () => {
       const d = drag.current; drag.current = null; const el = ref.current
-      if (!d?.active || !el) return
+      if (!d || !el) return
       const v = d.dy / Math.max(performance.now() - d.t, 1)
       el.style.transition = 'transform .28s var(--ease-out)'
-      if (d.dy > 120 || v > 0.6) { el.style.transform = 'translate3d(0, 100%, 0)'; dismissTimer.current = setTimeout(onClose, 200) } else el.style.transform = ''
+      if (d.dy > 120 || v > 0.6) { el.style.transform = 'translate3d(0, 100%, 0)'; setTimeout(onClose, 200) } else el.style.transform = ''
     },
-    onPointerCancel: () => { drag.current = null; if (ref.current) { ref.current.style.transition = ''; ref.current.style.transform = '' } },
     style: { touchAction: 'none' },
   }
   return { ref, grabProps }
