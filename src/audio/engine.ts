@@ -1,5 +1,6 @@
 import { makeTransition, type TransitionSettings } from '../core/crossfade'
 import type { RepeatMode } from '../core/queue'
+import { EffectsChain } from './effects'
 import { buildEnvelope, needsEnvelope, type EnvelopeSpec } from './envelope'
 
 export interface PlayItem {
@@ -41,6 +42,7 @@ type Listener = (s: EngineState) => void
 export class PlaybackEngine {
   readonly ctx: AudioContext
   readonly master: GainNode
+  readonly fx: EffectsChain
   items: PlayItem[] = []
   repeat: RepeatMode = 'off'
   /** global crossfade seconds used unless transitionAfter() overrides */
@@ -55,7 +57,9 @@ export class PlaybackEngine {
     const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
     this.ctx = ctx ?? new AC({ latencyHint: 'playback' })
     this.master = this.ctx.createGain()
-    this.master.connect(this.ctx.destination)
+    this.fx = new EffectsChain(this.ctx)
+    this.master.connect(this.fx.input)
+    this.fx.output.connect(this.ctx.destination)
     try { (navigator as unknown as { audioSession?: { type: string } }).audioSession && ((navigator as unknown as { audioSession: { type: string } }).audioSession.type = 'playback') } catch { /* optional API */ }
     this.ctx.addEventListener('statechange', () => this.maybeRecover())
     this.bindMediaSession()

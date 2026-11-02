@@ -1,3 +1,4 @@
+import { Sound } from './Sound'
 import { getEngine, settings, updateSettings } from '../state'
 
 export function Settings() {
@@ -12,6 +13,7 @@ export function Settings() {
         <label class="field"><span>Repeat</span>
           <select value={s.repeat} onChange={e => void updateSettings({ repeat: (e.target as HTMLSelectElement).value as typeof s.repeat })} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '6px 8px' }}><option value="off">Off</option><option value="all">All</option><option value="one">One</option></select></label>
       </div>
+      <Sound />
       <div class="hint">Gapless playback is on whenever crossfade is off. Per-transition crossfades for EPs are set in Studio.</div>
       <div class="group">
         <div class="kv"><span>Installed as app</span><span>{standalone ? 'Yes' : 'No — Share → Add to Home Screen'}</span></div>

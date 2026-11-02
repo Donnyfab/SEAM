@@ -59,6 +59,7 @@ let engine: PlaybackEngine | null = null
 export function getEngine(): PlaybackEngine {
   if (engine) return engine
   engine = new PlaybackEngine()
+  engine.fx.apply(settings.value.fx)
   engine.subscribe(s => { engineState.value = s })
   return engine
 }
@@ -125,7 +126,7 @@ export async function setArrangements(list: Arrangement[]) { arrangements.value 
 export async function updateSettings(p: Partial<Settings>) {
   settings.value = { ...settings.value, ...p }
   await saveSettings(settings.value)
-  if (engine) { engine.crossfade = settings.value.crossfade; engine.repeat = settings.value.repeat }
+  if (engine) { engine.crossfade = settings.value.crossfade; engine.repeat = settings.value.repeat; engine.fx.apply(settings.value.fx) }
 }
 
 // Count a play when a new track becomes current.
