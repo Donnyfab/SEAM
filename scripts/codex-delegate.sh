@@ -12,10 +12,10 @@ cd "$WT"; npm ci --silent >/dev/null 2>&1
 set +e
 "$CODEX" exec --sandbox workspace-write -C "$WT" -o "$OUT/$ID.last.txt" \
   "Read AGENTS.md and HANDOFF.md. Task $ID: $PROMPT. Touch only the files named in the task. Run 'npm test' and 'npm run typecheck'. Do not run git commit. Reply with a 3-line summary." \
-  >"$OUT/$ID.log" 2>&1
+  </dev/null >"$OUT/$ID.log" 2>&1
 rc=$?
 set -e
-git add -A -- . ':!node_modules'
+git add -A
 if ! git diff --cached --quiet; then
   git -c user.name=Codex -c user.email=217367345+Donnyfab@users.noreply.github.com commit -qm "$ID: Codex work (rc=$rc)"
 fi
