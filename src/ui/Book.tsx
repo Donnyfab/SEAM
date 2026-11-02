@@ -1,3 +1,4 @@
+import { t as translate } from '../i18n'
 import { useEffect, useState } from 'preact/hooks'
 import { addBookmark, bookState, bookmarks, getBook, removeBookmark, settings, trackById, updateSettings } from '../state'
 import { sleepTimer } from '../audio/bookPlayer'
@@ -13,10 +14,10 @@ export function MiniBook({ onOpen }: { onOpen: () => void }) {
   return (
     <div class="mini">
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={onOpen}>
-        <Art id={t.id} /><div class="meta"><div class="t" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div><div class="s" style={{ color: 'var(--fg2)', fontSize: 13 }}>{s.live ? 'Live stream' : `${hms(s.duration - s.position)} left · ${s.rate}×`}</div></div>
+        <Art id={t.id} /><div class="meta"><div class="t" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div><div class="s" style={{ color: 'var(--fg2)', fontSize: 13 }}>{s.live ? translate("Live stream") : translate("{value} left · {rate}×", { value: hms(s.duration - s.position), rate: s.rate })}</div></div>
       </div>
-      <button class="ctl" aria-label="Back 15 seconds" onClick={() => b.skip(-settings.value.skipBack)}>↺</button>
-      <button class="ctl" aria-label={s.status === 'playing' ? 'Pause' : 'Play'} onClick={() => void b.toggle()}>{s.status === 'playing' ? '❚❚' : '▶'}</button>
+      <button class="ctl" aria-label={translate("Back 15 seconds")} onClick={() => b.skip(-settings.value.skipBack)}>↺</button>
+      <button class="ctl" aria-label={s.status === 'playing' ? translate("Pause") : translate("Play")} onClick={() => void b.toggle()}>{s.status === 'playing' ? '❚❚' : '▶'}</button>
       <div class="prog" style={{ width: `${s.duration ? (s.position / s.duration) * 100 : 0}%` }} />
     </div>
   )
@@ -35,29 +36,29 @@ export function BookSheet({ onClose }: { onClose: () => void }) {
   const setTimer = (m: number | null) => { cancel?.(); setSleep(m); setCancel(m ? () => sleepTimer(m, () => { b.pause(); setSleep(null) }) : null) }
   const rate = (r: number) => { b.setRate(r); void updateSettings({ bookRate: r }) }
   return (
-    <div class="sheet" role="dialog" aria-label="Audiobook player">
-      <button aria-label="Close" onClick={onClose} style={{ height: 22 }}><div class="grab" style={{ margin: '0 auto' }} /></button>
+    <div class="sheet" role="dialog" aria-label={translate("Audiobook player")}>
+      <button aria-label={translate("Close")} onClick={onClose} style={{ height: 22 }}><div class="grab" style={{ margin: '0 auto' }} /></button>
       <div style={{ maxWidth: 360, width: '100%', margin: '0 auto' }}><Art id={t.id} big /></div>
       <div class="np-title">{t.title}</div><div class="np-sub">{t.artist}</div>
       {!s.live && <div style={{ marginTop: 14 }}>
-        <input type="range" aria-label="Seek" min={0} max={Math.max(s.duration, 1)} step={1} value={shown} style={{ '--p': `${s.duration ? (shown / s.duration) * 100 : 0}%` } as never}
+        <input type="range" aria-label={translate("Seek")} min={0} max={Math.max(s.duration, 1)} step={1} value={shown} style={{ '--p': `${s.duration ? (shown / s.duration) * 100 : 0}%` } as never}
           onInput={e => setDrag(Number((e.target as HTMLInputElement).value))} onChange={e => { b.seek(Number((e.target as HTMLInputElement).value)); setDrag(null) }} />
-        <div class="times"><span>{hms(shown)}</span><span>-{hms(Math.max(s.duration - shown, 0) / s.rate)} at {s.rate}×</span></div>
+        <div class="times"><span>{hms(shown)}</span><span>-{hms(Math.max(s.duration - shown, 0) / s.rate)}{translate(" at ")}{s.rate}×</span></div>
       </div>}
       <div class="controls" style={{ gap: 26 }}>
-        <button aria-label={`Back ${settings.value.skipBack} seconds`} onClick={() => b.skip(-settings.value.skipBack)}>↺<span style={{ fontSize: 12 }}>{settings.value.skipBack}</span></button>
-        <button class="play" aria-label={s.status === 'playing' ? 'Pause' : 'Play'} onClick={() => void b.toggle()}>{s.status === 'playing' ? '⏸' : '▶'}</button>
-        <button aria-label={`Forward ${settings.value.skipForward} seconds`} onClick={() => b.skip(settings.value.skipForward)}>↻<span style={{ fontSize: 12 }}>{settings.value.skipForward}</span></button>
+        <button aria-label={translate("Back {skipBack} seconds", { skipBack: settings.value.skipBack })} onClick={() => b.skip(-settings.value.skipBack)}>↺<span style={{ fontSize: 12 }}>{settings.value.skipBack}</span></button>
+        <button class="play" aria-label={s.status === 'playing' ? translate("Pause") : translate("Play")} onClick={() => void b.toggle()}>{s.status === 'playing' ? '⏸' : '▶'}</button>
+        <button aria-label={translate("Forward {skipForward} seconds", { skipForward: settings.value.skipForward })} onClick={() => b.skip(settings.value.skipForward)}>↻<span style={{ fontSize: 12 }}>{settings.value.skipForward}</span></button>
       </div>
-      <div class="hint" style={{ margin: '0 0 4px' }}>Speed (pitch stays natural)</div>
+      <div class="hint" style={{ margin: '0 0 4px' }}>{translate("Speed (pitch stays natural)")}</div>
       <div class="seg" style={{ margin: '0 0 10px', overflowX: 'auto' }}>{RATES.map(r => <button class={s.rate === r ? 'on' : ''} onClick={() => rate(r)}>{r}×</button>)}</div>
-      <div class="seg" style={{ margin: '0 0 10px' }} aria-label="Sleep timer">
-        {[null, 15, 30, 60].map(m => <button class={sleep === m ? 'on' : ''} onClick={() => setTimer(m)}>{m ? `${m} min` : 'No timer'}</button>)}
+      <div class="seg" style={{ margin: '0 0 10px' }} aria-label={translate("Sleep timer")}>
+        {[null, 15, 30, 60].map(m => <button class={sleep === m ? 'on' : ''} onClick={() => setTimer(m)}>{m ? translate("{m} min", { m: m }) : translate("No timer")}</button>)}
       </div>
-      <button class="btn secondary" onClick={() => void addBookmark(t.id, b.position(), `${t.title} · ${hms(b.position())}`)}>＋ Add bookmark here</button>
+      <button class="btn secondary" onClick={() => void addBookmark(t.id, b.position(), `${t.title} · ${hms(b.position())}`)}>{translate("＋ Add bookmark here")}</button>
       {marks.length > 0 && <div class="group" style={{ margin: '14px 0 0' }}>{marks.map(m => (
         <div class="row" style={{ padding: 0 }}><button class="row" style={{ flex: 1 }} onClick={() => b.seek(m.time)}><div class="grow"><div class="t">{m.label}</div><div class="s">{hms(m.time)}</div></div></button>
-          <button aria-label="Delete bookmark" style={{ padding: '0 16px', color: 'var(--danger)' }} onClick={() => void removeBookmark(m.id)}>✕</button></div>))}</div>}
+          <button aria-label={translate("Delete bookmark")} style={{ padding: '0 16px', color: 'var(--danger)' }} onClick={() => void removeBookmark(m.id)}>✕</button></div>))}</div>}
     </div>
   )
 }

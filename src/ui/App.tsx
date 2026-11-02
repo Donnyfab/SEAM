@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'preact/hooks'
+import { resolveLocale, setLocale, t as translate } from '../i18n'
+import { useEffect, useLayoutEffect, useState } from 'preact/hooks'
 import { ready, toast, engineState, queueIds, bookState, settings } from '../state'
 import { LockScreen, initLock, locked } from './Security'
 import { loadLastFm } from '../connect/scrobbler'
@@ -29,18 +30,27 @@ export function App() {
     r.style.fontSize = `${17 * st.textScale}px`
     r.classList.toggle('reduce-motion', st.reduceMotion); r.classList.toggle('high-contrast', st.highContrast)
   }, [settings.value.textScale, settings.value.reduceMotion, settings.value.highContrast])
+  useLayoutEffect(() => {
+    const applyLanguage = () => {
+      const code = resolveLocale(settings.value.language, navigator.languages)
+      setLocale(code); document.documentElement.lang = code
+    }
+    applyLanguage()
+    window.addEventListener('languagechange', applyLanguage)
+    return () => window.removeEventListener('languagechange', applyLanguage)
+  }, [settings.value.language])
   const bookActive = bookState.value.status !== 'idle' && !!bookState.value.trackId
   const hasTrack = bookActive || (engineState.value.index >= 0 && !!queueIds.value[engineState.value.index])
   return (
     <div class="app">
       <main class={`view${hasTrack ? '' : ' no-mini'}`}>
-        {!ready.value ? <div class="empty">Loading…</div> : tab === 'library' ? <Library /> : tab === 'studio' ? <Studio /> : tab === 'connect' ? <Connect /> : tab === 'files' ? <Files /> : <Settings />}
+        {!ready.value ? <div class="empty">{translate("Loading…")}</div> : tab === 'library' ? <Library /> : tab === 'studio' ? <Studio /> : tab === 'connect' ? <Connect /> : tab === 'files' ? <Files /> : <Settings />}
       </main>
       {hasTrack && (bookActive ? <MiniBook onOpen={() => setOpen(true)} /> : <MiniPlayer onOpen={() => setOpen(true)} />)}
-      <nav class="tabbar" aria-label="Main">
+      <nav class="tabbar" aria-label={translate("Main")}>
         {(Object.keys(icons) as Tab[]).map(t => (
-          <button class={tab === t ? 'on' : ''} onClick={() => setTab(t)} aria-label={labels[t]} aria-current={tab === t ? 'page' : undefined}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={icons[t]} /></svg>{labels[t]}
+          <button class={tab === t ? 'on' : ''} onClick={() => setTab(t)} aria-label={translate(labels[t])} aria-current={tab === t ? 'page' : undefined}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d={icons[t]} /></svg>{translate(labels[t])}
           </button>))}
       </nav>
       {open && (bookActive ? <BookSheet onClose={() => setOpen(false)} /> : <NowPlaying onClose={() => setOpen(false)} />)}

@@ -1,3 +1,4 @@
+import { t as translate } from '../i18n'
 import { useEffect, useState } from 'preact/hooks'
 import { signal } from '@preact/signals'
 import { createPasscodeRecord, nextLockout, verifyPasscode, type PasscodeRecord } from '../security/passcode'
@@ -33,13 +34,13 @@ export function LockScreen() {
   }
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫']
   return (
-    <div class="sheet" role="dialog" aria-label="Locked" style={{ zIndex: 100, alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-      <h2 style={{ margin: '0 0 6px' }}>SEAM is locked</h2>
-      <div class="s" style={{ color: 'var(--fg2)', marginBottom: 18 }}>{wait > 0 ? `Too many attempts. Try again in ${wait}s` : 'Enter your passcode'}</div>
+    <div class="sheet" role="dialog" aria-label={translate("Locked")} style={{ zIndex: 100, alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+      <h2 style={{ margin: '0 0 6px' }}>{translate("SEAM is locked")}</h2>
+      <div class="s" style={{ color: 'var(--fg2)', marginBottom: 18 }}>{wait > 0 ? translate("Too many attempts. Try again in {wait}s", { wait: wait }) : translate("Enter your passcode")}</div>
       <div aria-live="polite" style={{ fontSize: 28, letterSpacing: 8, height: 40 }}>{'●'.repeat(code.length)}</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 76px)', gap: 14, marginTop: 14 }}>
         {keys.map(k => k === '' ? <span /> : (
-          <button class="btn secondary" aria-label={k === '⌫' ? 'Delete' : k} disabled={wait > 0} style={{ width: 76, height: 76, borderRadius: 38, fontSize: 28, background: 'var(--bg2)', color: 'var(--fg)' }} onClick={() => (k === '⌫' ? setCode(code.slice(0, -1)) : void press(k))}>{k}</button>))}
+          <button class="btn secondary" aria-label={k === '⌫' ? translate("Delete") : k} disabled={wait > 0} style={{ width: 76, height: 76, borderRadius: 38, fontSize: 28, background: 'var(--bg2)', color: 'var(--fg)' }} onClick={() => (k === '⌫' ? setCode(code.slice(0, -1)) : void press(k))}>{k}</button>))}
       </div>
     </div>
   )
@@ -51,25 +52,25 @@ export function PasscodeSettings() {
   const [first, setFirst] = useState(''), [val, setVal] = useState('')
   const reset = () => { setMode('idle'); setFirst(''); setVal('') }
   const submit = async () => {
-    if (!/^\d{4,8}$/.test(val)) return notify('Use 4 to 8 digits')
+    if (!/^\d{4,8}$/.test(val)) return notify(translate("Use 4 to 8 digits"))
     if (mode === 'set') { setFirst(val); setVal(''); setMode('confirm'); return }
     if (mode === 'confirm') {
-      if (val !== first) { notify('Passcodes did not match'); reset(); return }
-      const r = await createPasscodeRecord(val); await savePasscode(r); passcode.value = r; notify('Passcode set'); reset(); return
+      if (val !== first) { notify(translate("Passcodes did not match")); reset(); return }
+      const r = await createPasscodeRecord(val); await savePasscode(r); passcode.value = r; notify(translate("Passcode set")); reset(); return
     }
     if (mode === 'remove' && rec) {
-      if (!(await verifyPasscode(val, rec))) { notify('Wrong passcode'); setVal(''); return }
-      await savePasscode(null); passcode.value = null; locked.value = false; notify('Passcode removed'); reset()
+      if (!(await verifyPasscode(val, rec))) { notify(translate("Wrong passcode")); setVal(''); return }
+      await savePasscode(null); passcode.value = null; locked.value = false; notify(translate("Passcode removed")); reset()
     }
   }
   return (
     <div class="group">
-      {mode === 'idle' && <button class="row" style={{ color: 'var(--accent)' }} onClick={() => setMode(rec ? 'remove' : 'set')}>{rec ? 'Remove passcode' : 'Set passcode…'}</button>}
+      {mode === 'idle' && <button class="row" style={{ color: 'var(--accent)' }} onClick={() => setMode(rec ? 'remove' : 'set')}>{rec ? translate("Remove passcode") : translate("Set passcode…")}</button>}
       {mode !== 'idle' && <>
-        <label class="field"><span>{mode === 'confirm' ? 'Repeat passcode' : mode === 'remove' ? 'Current passcode' : 'New passcode (4–8 digits)'}</span>
+        <label class="field"><span>{mode === 'confirm' ? translate("Repeat passcode") : mode === 'remove' ? translate("Current passcode") : translate("New passcode (4–8 digits)")}</span>
           <input type="password" inputMode="numeric" maxLength={8} autocomplete="off" value={val} onInput={e => setVal((e.target as HTMLInputElement).value.replace(/\D/g, ''))} style={{ width: 110, background: 'none', border: 0, textAlign: 'right', outline: 0 }} /></label>
-        <div class="actions"><button class="btn small" onClick={submit}>Continue</button><button class="btn small secondary" onClick={reset}>Cancel</button></div></>}
-      {rec && mode === 'idle' && <label class="field"><span>Lock after leaving app</span><select value={settings.value.lockAfter} onChange={e => void import('../state').then(m => m.updateSettings({ lockAfter: Number((e.target as HTMLSelectElement).value) }))} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '6px 8px' }}><option value={0}>Immediately</option><option value={60}>1 minute</option><option value={300}>5 minutes</option><option value={900}>15 minutes</option></select></label>}
+        <div class="actions"><button class="btn small" onClick={submit}>{translate("Continue")}</button><button class="btn small secondary" onClick={reset}>{translate("Cancel")}</button></div></>}
+      {rec && mode === 'idle' && <label class="field"><span>{translate("Lock after leaving app")}</span><select value={settings.value.lockAfter} onChange={e => void import('../state').then(m => m.updateSettings({ lockAfter: Number((e.target as HTMLSelectElement).value) }))} style={{ background: 'var(--bg2)', border: 0, borderRadius: 8, padding: '6px 8px' }}><option value={0}>{translate("Immediately")}</option><option value={60}>{translate("1 minute")}</option><option value={300}>{translate("5 minutes")}</option><option value={900}>{translate("15 minutes")}</option></select></label>}
     </div>
   )
 }

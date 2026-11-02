@@ -1,3 +1,4 @@
+import { t as translate } from './i18n'
 import { signal, computed, effect } from '@preact/signals'
 import { PlaybackEngine, type EngineState, type PlayItem } from './audio/engine'
 import { BookPlayer, type BookState } from './audio/bookPlayer'
@@ -58,7 +59,7 @@ export function decodeTrack(id: string, ctx: BaseAudioContext): Promise<AudioBuf
   const p = (async () => {
     const remote = remoteLoaders.get(id)
     const blob = remote ? await remote() : await loadFile(id)
-    if (!blob) throw new Error('Audio file missing from storage')
+    if (!blob) throw new Error(translate("Audio file missing from storage"))
     const buf = await ctx.decodeAudioData(await blob.arrayBuffer())
     decoded.set(id, buf)
     void measureOnce(id, buf)
@@ -84,7 +85,7 @@ export async function decodeTrackUncached(id: string, ctx: BaseAudioContext): Pr
   const hit = decoded.get(id)
   if (hit) return hit
   const blob = await loadFile(id)
-  if (!blob) throw new Error('Audio file missing from storage')
+  if (!blob) throw new Error(translate("Audio file missing from storage"))
   return ctx.decodeAudioData(await blob.arrayBuffer())
 }
 
@@ -122,22 +123,22 @@ export async function playBook(id: string, startAt?: number) {
   const t = trackById.peek().get(id); if (!t) return
   engine?.stop()
   const blob = await loadFile(id)
-  if (!blob) return notify('Audio file missing from storage')
+  if (!blob) return notify(translate("Audio file missing from storage"))
   const url = await artworkUrl(id)
   try { await getBook().load(blob, { id, title: t.title, artist: t.artist, album: t.album, artwork: url ?? undefined }, startAt ?? positions.peek()[id] ?? 0, settings.peek().bookRate) }
-  catch (e) { notify(e instanceof Error ? e.message : 'Playback failed') }
+  catch (e) { notify(e instanceof Error ? translate(e.message) : translate("Playback failed")) }
 }
 
 export async function addBookmark(trackId: string, time: number, label?: string) {
   const t = trackById.peek().get(trackId)
-  const b: Bookmark = { id: crypto.randomUUID(), trackId, time, label: label || `${t?.title ?? 'Bookmark'}`, createdAt: Date.now() }
+  const b: Bookmark = { id: crypto.randomUUID(), trackId, time, label: label || `${t?.title ?? translate("Bookmark")}`, createdAt: Date.now() }
   bookmarks.value = [...bookmarks.peek(), b]
   await saveBookmarks(bookmarks.peek())
-  notify('Bookmark added')
+  notify(translate("Bookmark added"))
 }
 export async function removeBookmark(id: string) { bookmarks.value = bookmarks.peek().filter(b => b.id !== id); await saveBookmarks(bookmarks.peek()) }
 export async function playBookmark(b: Bookmark) {
-  const t = trackById.peek().get(b.trackId); if (!t) return notify('That song was deleted')
+  const t = trackById.peek().get(b.trackId); if (!t) return notify(translate("That song was deleted"))
   if (t.kind === 'audiobook') return playBook(t.id, b.time)
   await playTracks([t], 0, b.time)
 }
@@ -209,7 +210,7 @@ export function remoteTrack(source: Source, node: RemoteNode): StoredTrack {
   const m = node.track
   const id = `remote:${source.id}:${node.id}`
   const t: StoredTrack = {
-    id, title: m?.title ?? node.title, artist: m?.artist ?? 'Unknown Artist', album: m?.album ?? 'Unknown Album', duration: m?.duration ?? 0,
+    id, title: m?.title ?? node.title, artist: m?.artist ?? translate("Unknown Artist"), album: m?.album ?? translate("Unknown Album"), duration: m?.duration ?? 0,
     trackNo: m?.trackNo, year: m?.year, genre: m?.genre, addedAt: Date.now(), playCount: 0, favorite: false, fileName: node.fileName ?? node.title,
   }
   remoteLoaders.set(id, () => createAdapter(source).blob(node))
@@ -245,8 +246,8 @@ export async function removeSource(id: string) { sources.value = sources.peek().
 /** Stream an internet-radio URL (or any direct stream) with the media-element player. */
 export async function playStream(name: string, url: string) {
   engine?.stop()
-  try { await getBook().loadStream(url, { id: `stream:${url}`, title: name, artist: 'Internet radio', album: url }) }
-  catch { notify('Could not play that stream. Browsers need https:// streams.') }
+  try { await getBook().loadStream(url, { id: `stream:${url}`, title: name, artist: translate("Internet radio"), album: url }) }
+  catch { notify(translate("Could not play that stream. Browsers need https:// streams.")) }
 }
 
 export async function removeTrack(id: string) {
@@ -258,8 +259,8 @@ export async function removeTrack(id: string) {
 export async function importAudio(files: File[], onProgress?: (d: number, t: number) => void) {
   const res = await importFiles(files, tracks.value, onProgress)
   tracks.value = [...tracks.value, ...res.added]
-  if (res.failed.length) notify(`${res.failed.length} file(s) failed: ${res.failed[0]!.name} — ${res.failed[0]!.reason}`)
-  else if (res.added.length) notify(`Added ${res.added.length} track${res.added.length === 1 ? '' : 's'}`)
+  if (res.failed.length) notify(translate("{length} file(s) failed: {name} — {reason}", { length: res.failed.length, name: res.failed[0]!.name, reason: res.failed[0]!.reason }))
+  else if (res.added.length) notify(translate('addedTracks', { count: res.added.length }))
   return res
 }
 
@@ -312,7 +313,7 @@ export async function reloadAll() {
 export async function boot() {
   await reloadAll()
   setSourceSaver(saveSource)
-  try { const s = await finishAuth(); if (s) { await saveSource(s); notify(`Connected to ${s.name}`) } } catch (e) { notify(e instanceof Error ? e.message : 'Sign-in failed') }
+  try { const s = await finishAuth(); if (s) { await saveSource(s); notify(translate("Connected to {name}", { name: s.name })) } } catch (e) { notify(e instanceof Error ? translate(e.message) : translate("Sign-in failed")) }
   try { await navigator.storage?.persist?.() } catch { /* best effort */ }
   ready.value = true
 }
