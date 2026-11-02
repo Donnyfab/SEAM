@@ -187,3 +187,13 @@ button:not(:disabled):active { opacity: .6; }
 .err-box { padding: 40px 24px; text-align: center; } .err-box button { margin-top: 14px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; } .spinner { animation: spin 1.6s linear infinite !important; animation-duration: 1.6s !important; animation-iteration-count: infinite !important; } .skeleton::after { animation: none !important; } }
 .reduce-motion .spinner { animation: spin 1.6s linear infinite !important; animation-duration: 1.6s !important; animation-iteration-count: infinite !important; } .reduce-motion .skeleton::after { animation: none !important; }
+
+.more-btn { width: 48px; align-self: stretch; display: grid; place-items: center; color: var(--fg2); flex: none; }
+.pl-more::after { content: ''; position: absolute; inset: -8px; }
+.nav .side, .nav button { min-height: 44px; min-width: 44px; }
+.seg button { min-height: 44px; } .toggles button { padding: 10px 8px; min-height: 44px; } .controls button { min-width: 44px; min-height: 44px; }
+.btn.small { min-height: 44px; } select { min-height: 44px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.vrow + .vrow::before { content: ''; position: absolute; top: 0; left: 70px; right: 0; border-top: .5px solid var(--sep); }
+.vrow { position: relative; } .vrow > .row { height: 100%; min-height: 0; }
+.vrow > .row .row { padding-top: 0; padding-bottom: 0; }

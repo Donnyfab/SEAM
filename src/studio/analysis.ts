@@ -1,4 +1,4 @@
-import { computePeaks, detectSilenceBounds, findTransitionPoints } from '../audio/peaks'
+import { analyzeAsync, downmixToMono } from '../audio/dspClient'
 import { decodeTrack, getEngine } from '../state'
 
 export interface TrackAnalysis {
@@ -18,9 +18,10 @@ export function analyzeTrack(id: string): Promise<TrackAnalysis> {
     p = (async () => {
       const ctx = getEngine().ctx
       const buf = await decodeTrack(id, ctx)
-      const ch = Array.from({ length: Math.min(buf.numberOfChannels, 2) }, (_, i) => buf.getChannelData(i))
-      const { min, max } = computePeaks(ch, 1200)
-      return { duration: buf.duration, min, max, silence: detectSilenceBounds(ch, buf.sampleRate), points: findTransitionPoints(ch, buf.sampleRate) }
+      // Downmix on the main thread (cheap, one pass) and analyse the copy on a worker so the UI stays responsive.
+      const mono = downmixToMono(Array.from({ length: Math.min(buf.numberOfChannels, 2) }, (_, i) => buf.getChannelData(i)))
+      const r = await analyzeAsync(mono, buf.sampleRate, 1200)
+      return { duration: buf.duration, min: r.min, max: r.max, silence: r.silence, points: r.points }
     })()
     p.catch(() => cache.delete(id))
     cache.set(id, p)

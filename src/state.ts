@@ -347,6 +347,18 @@ export async function updatePlaylist(id: string, patch: Partial<Playlist>) {
   playlists.value = playlists.value.map(p => (p.id === id ? { ...p, ...patch, updatedAt: Date.now() } : p))
   await savePlaylists(playlists.value)
 }
+/** Remove playlist entries immediately, with an Undo that restores the previous order. */
+export function removeFromPlaylistWithUndo(id: string, trackIds: string[]) {
+  const p = playlists.peek().find(x => x.id === id); if (!p) return
+  const before = p.trackIds
+  void updatePlaylist(id, { trackIds: before.filter(x => !trackIds.includes(x)) })
+  notifyUndo(translate('removedFromPlaylist', { count: trackIds.length }), () => { void updatePlaylist(id, { trackIds: before }) }, () => {})
+}
+export function deletePlaylistWithUndo(ps: Playlist[]) {
+  const ids = new Set(ps.map(p => p.id))
+  playlists.value = playlists.peek().filter(p => !ids.has(p.id)); void savePlaylists(playlists.peek())
+  notifyUndo(ps.length === 1 ? translate('Deleted “{name}”', { name: ps[0]!.name }) : translate('deletedPlaylists', { count: ps.length }), () => { playlists.value = [...playlists.peek(), ...ps]; void savePlaylists(playlists.peek()) }, () => {})
+}
 export async function deletePlaylist(id: string) { playlists.value = playlists.value.filter(p => p.id !== id); await savePlaylists(playlists.value) }
 
 export async function setArrangements(list: Arrangement[]) { arrangements.value = list; await saveArrangements(list) }

@@ -4,7 +4,7 @@ import { downloadRemote, notify, playRemote, playStream, removeSource, saveSourc
 import { createAdapter, explainNetworkError, jellyfinLogin, testSource, type RemoteAdapter, type RemoteNode, type Source, type SourceKind } from '../connect/sources'
 import { parseM3U, parsePLS } from '../connect/playlists'
 import { beginAuth, isCloud, redirectUri } from '../connect/cloud'
-import { fmtBytes } from './common'
+import { fmtBytes, useSheet } from './common'
 
 const KINDS: { kind: SourceKind; label: string; icon: string; color: string; hint: string }[] = [
   { kind: 'webdav', label: 'WebDAV / NAS / Nextcloud', icon: '☁', color: '#0a84ff', hint: 'Synology, Nextcloud, Apache, rclone serve webdav…' },
@@ -17,7 +17,11 @@ const KINDS: { kind: SourceKind; label: string; icon: string; color: string; hin
 ]
 const kindInfo = (k: SourceKind) => KINDS.find(x => x.kind === k)
 
+/** Typed-in connection details survive closing the sheet (in memory only; never written to disk until Connect succeeds). */
+const sourceDrafts = new Map<SourceKind, Record<string, string>>()
+
 function AddSource({ kind, onClose }: { kind: SourceKind; onClose: () => void }) {
+  const { ref } = useSheet(onClose)
   const [f, setF] = useState({ name: translate(kindInfo(kind)?.label ?? '').split(' ')[0] ?? '', url: '', username: '', password: '', clientId: '' })
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -32,7 +36,7 @@ function AddSource({ kind, onClose }: { kind: SourceKind; onClose: () => void })
         if (kind === 'jellyfin') s = await jellyfinLogin(s)
         await testSource(s)
       }
-      await saveSource(s); notify(translate("Connected to {name}", { name: s.name })); onClose()
+      await saveSource(s); sourceDrafts.delete(kind); notify(translate("Connected to {name}", { name: s.name })); onClose()
     } catch (e) { setErr(translate(explainNetworkError(e))) }
     setBusy(false)
   }
@@ -41,7 +45,7 @@ function AddSource({ kind, onClose }: { kind: SourceKind; onClose: () => void })
       <input type={type as 'text'} placeholder={ph} value={f[k]} autocapitalize="off" autocomplete="off" spellcheck={false} onInput={set(k)} style={{ flex: 1, minWidth: 0, background: 'none', border: 0, textAlign: 'right', outline: 0 }} /></label>
   )
   return (
-    <div class="sheet" role="dialog" aria-label={translate("Add source")}>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label={translate("Add source")} ref={ref} tabIndex={-1}>
       <div class="nav" style={{ margin: '-12px -24px 8px' }}><button class="side" onClick={onClose}>{translate("Cancel")}</button><h1>{translate(kindInfo(kind)?.label ?? '')}</h1><button class="side right" disabled={busy} onClick={save}>{busy ? '…' : isCloud(kind) ? translate("Sign in") : translate("Connect")}</button></div>
       <div class="group" style={{ margin: '8px 0' }}>
         {input('name', translate("Name"))}

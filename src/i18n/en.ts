@@ -446,6 +446,21 @@ export const en: Record<string, string> = {
   "secondsCount_one": "{count} second",
   "secondsCount_other": "{count} seconds",
   "{count} selected": "{count} selected",
-  "{hours} hr {minutes} min": "{hours} hr {minutes} min"
+  "{hours} hr {minutes} min": "{hours} hr {minutes} min",
+  "Back online": "Back online",
+  "Could not save your changes. Storage may be full.": "Could not save your changes. Storage may be full.",
+  "Deleted “{name}”": "Deleted “{name}”",
+  "Deleted “{title}”": "Deleted “{title}”",
+  "Reload app": "Reload app",
+  "Something went wrong": "Something went wrong",
+  "This screen could not be loaded. Check your connection and try again.": "This screen could not be loaded. Check your connection and try again.",
+  "Try again": "Try again",
+  "Undo": "Undo",
+  "You are offline. Your downloaded library still plays; servers and cloud sources need a connection.": "You are offline. Your downloaded library still plays; servers and cloud sources need a connection.",
+  "Your music and playlists are safe. You can try this screen again or reload the app.": "Your music and playlists are safe. You can try this screen again or reload the app.",
+  "deletedPlaylists_one": "Deleted {count} playlist",
+  "deletedPlaylists_other": "Deleted {count} playlists",
+  "removedFromPlaylist_one": "Removed {count} song from the playlist",
+  "removedFromPlaylist_other": "Removed {count} songs from the playlist"
 }
 export default en

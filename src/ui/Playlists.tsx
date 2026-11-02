@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'preact/hooks'
 import { signal } from '@preact/signals'
 import { t as translate } from '../i18n'
 import {
-  artworkUrl, createPlaylist, deletePlaylist, enqueue, engineState, notify, playTracks, playlists, queueIds, setPlaylistArtwork,
+  artworkUrl, createPlaylist, deletePlaylistWithUndo, removeFromPlaylistWithUndo, enqueue, engineState, notify, playTracks, playlists, queueIds, setPlaylistArtwork,
   removePlaylistArtwork, settings, shuffle, toggleFavorite, trackById, tracks, updatePlaylist, updateSettings,
 } from '../state'
 import type { Playlist, StoredTrack } from '../library/store'
 import { exportM3U, exportSeamJson, matchEntries, moveItem, parsePlaylistFile, playlistDuration, searchPlaylists, sortPlaylists } from '../library/playlistIO'
 import { searchTracks, sortTracks } from '../library/model'
-import { Art, fmt, saveBlob, useDebounced, useInView } from './common'
+import { Art, fmt, saveBlob, useDebounced, useInView, useSheet } from './common'
 import { askConfirm, askText, GlassMenu, GlassSheet, type GlassItem } from './Glass'
 import { Icon } from './Icon'
 import { EditTrack } from './Edit'
@@ -57,11 +57,12 @@ function Cover({ p, size, big }: { p: Playlist; size?: number; big?: boolean }) 
 }
 
 function TrackPicker({ title, onDone, onClose }: { title: string; onDone: (ids: string[]) => void; onClose: () => void }) {
+  const { ref } = useSheet(onClose)
   const [pick, setPick] = useState<string[]>([])
   const [q, setQ] = useState('')
   const list = useMemo(() => sortTracks(searchTracks(tracks.value.filter(x => x.kind !== 'audiobook'), q), 'title'), [q, tracks.value])
   return (
-    <div class="sheet" role="dialog" aria-label={title}>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label={title} ref={ref} tabIndex={-1}>
       <div class="nav" style={{ margin: '-12px -24px 8px' }}><button class="side" onClick={onClose}>{translate('Cancel')}</button><h1>{title}</h1><button class="side right" disabled={!pick.length} onClick={() => { onDone(pick); onClose() }}>{translate('Add')} {pick.length || ''}</button></div>
       <input class="search" style={{ margin: '4px 0 8px', width: '100%' }} type="search" placeholder={translate('Search songs, artists, albums')} value={q} onInput={e => setQ((e.target as HTMLInputElement).value)} />
       {!tracks.value.length && <div class="empty">{translate('Import music first: Library › Import & storage.')}</div>}
@@ -74,8 +75,9 @@ function TrackPicker({ title, onDone, onClose }: { title: string; onDone: (ids: 
 }
 
 function HelpSheet({ onClose }: { onClose: () => void }) {
+  const { ref } = useSheet(onClose)
   return (
-    <div class="sheet" role="dialog" aria-label={translate('Help')}>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label={translate('Help')} ref={ref} tabIndex={-1}>
       <div class="nav" style={{ margin: '-12px -24px 8px' }}><span class="side" /><h1>{translate('Help')}</h1><button class="side right" onClick={onClose}>{translate('Done')}</button></div>
       <ul class="help-list">
         <li>{translate('Tap + to create a playlist or import an .m3u, .m3u8, .pls or SEAM playlist file. Songs are matched to your library by file name, then by artist and title.')}</li>
@@ -128,7 +130,7 @@ const artworkItems = (p: Playlist): GlassItem[] => [
 const renamePlaylist = async (p: Playlist) => { const n = await askText({ title: translate('Rename playlist'), value: p.name, ok: translate('Save') }); if (n) void updatePlaylist(p.id, { name: n }) }
 const confirmDelete = async (ps: Playlist[]) => {
   const ok = await askConfirm({ title: ps.length === 1 ? translate('Delete playlist “{name}”?', { name: ps[0]!.name }) : translate('deletePlaylists', { count: ps.length }), message: translate('The songs stay in your library.'), ok: translate('Delete'), danger: true })
-  if (ok) { for (const p of ps) await deletePlaylist(p.id); notify(translate('Deleted')) }
+  if (ok) deletePlaylistWithUndo(ps)
   return ok
 }
 const exportItems = (p: Playlist): GlassItem[] => [
@@ -295,7 +297,7 @@ function PlaylistDetail({ id }: { id: string }) {
     { label: grid ? translate('List') : translate('Grid'), icon: grid ? 'list' : 'grid', run: () => setGrid(g => !g) },
     { label: translate('Delete playlist'), icon: 'trash', danger: true, divider: true, run: async () => { if (await confirmDelete([p])) back() } },
   ]
-  const remove = (ids: string[]) => void updatePlaylist(p.id, { trackIds: p.trackIds.filter(x => !ids.includes(x)) })
+  const remove = (ids: string[]) => removeFromPlaylistWithUndo(p.id, ids)
   const songItems = (x: StoredTrack): GlassItem[] => [
     { label: translate('Play'), icon: 'play', run: () => void playTracks(manual ? all : shown, (manual ? all : shown).indexOf(x)) },
     { label: translate('Play next'), icon: 'playNext', run: () => void enqueue([x], 'next') },

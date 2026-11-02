@@ -9,7 +9,7 @@ import { arrangements, decodeTrackUncached, engineState, getEngine, notify, play
 import { renderMix } from '../audio/render'
 import { analyzeTrack, type TrackAnalysis } from '../studio/analysis'
 import { playArrangement, previewTransition } from '../studio/playback'
-import { Art, fmt, saveBlob } from './common'
+import { Art, fmt, saveBlob, useSheet } from './common'
 
 const currentId = signal<string | null>(null)
 const exportDepth = signal<16 | 24 | 32>(16)
@@ -51,9 +51,10 @@ function Waveform({ a, index, onChange }: { a: TrackAnalysis | null; index: numb
 }
 
 function AddTracks({ onAdd, onClose }: { onAdd: (ids: string[]) => void; onClose: () => void }) {
+  const { ref } = useSheet(onClose)
   const [pick, setPick] = useState<string[]>([])
   return (
-    <div class="sheet">
+    <div class="sheet" role="dialog" aria-modal="true" aria-label={translate("Add songs")} ref={ref} tabIndex={-1}>
       <div class="nav" style={{ margin: '-12px -24px 8px', position: 'sticky' }}><button class="side" onClick={onClose}>{translate("Cancel")}</button><h1>{translate("Add songs")}</h1><button class="side right" disabled={!pick.length} onClick={() => { onAdd(pick); onClose() }}>{translate("Add ")}{pick.length || ''}</button></div>
       {!tracks.value.length && <div class="empty">{translate("Import music first: Library › Import & storage.")}</div>}
       <div class="group" style={{ margin: 0 }}>{tracks.value.map(t => (

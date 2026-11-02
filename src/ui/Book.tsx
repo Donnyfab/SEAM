@@ -2,7 +2,7 @@ import { t as translate } from '../i18n'
 import { useEffect, useState } from 'preact/hooks'
 import { addBookmark, bookState, bookmarks, getBook, removeBookmark, settings, trackById, updateSettings } from '../state'
 import { sleepTimer } from '../audio/bookPlayer'
-import { Art, fmt } from './common'
+import { Art, fmt, useSheet } from './common'
 
 const RATES = [0.75, 1, 1.25, 1.5, 1.75, 2, 2.5]
 const hms = (t: number) => { const s = Math.max(0, Math.floor(t)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h}:${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}` : fmt(s) }
@@ -26,6 +26,7 @@ export function MiniBook({ onOpen }: { onOpen: () => void }) {
 export function BookSheet({ onClose }: { onClose: () => void }) {
   const s = bookState.value, t = s.trackId ? (trackById.value.get(s.trackId) ?? (s.meta ? { id: s.meta.id, title: s.meta.title, artist: s.meta.artist, kind: 'stream' as const } : undefined)) : undefined
   const b = getBook()
+  const { ref, grabProps } = useSheet(onClose)
   const [drag, setDrag] = useState<number | null>(null)
   const [sleep, setSleep] = useState<number | null>(null)
   const [cancel, setCancel] = useState<(() => void) | null>(null)
@@ -36,8 +37,8 @@ export function BookSheet({ onClose }: { onClose: () => void }) {
   const setTimer = (m: number | null) => { cancel?.(); setSleep(m); setCancel(m ? () => sleepTimer(m, () => { b.pause(); setSleep(null) }) : null) }
   const rate = (r: number) => { b.setRate(r); void updateSettings({ bookRate: r }) }
   return (
-    <div class="sheet" role="dialog" aria-label={translate("Audiobook player")}>
-      <button aria-label={translate("Close")} onClick={onClose} style={{ height: 22 }}><div class="grab" style={{ margin: '0 auto' }} /></button>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label={translate("Audiobook player")} ref={ref} tabIndex={-1}>
+      <div class="grab-area" {...(grabProps as object)}><button class="grab-btn" aria-label={translate("Close")} onClick={onClose}><div class="grab" /></button></div>
       <div style={{ maxWidth: 360, width: '100%', margin: '0 auto' }}><Art id={t.id} big /></div>
       <div class="np-title">{t.title}</div><div class="np-sub">{t.artist}</div>
       {!s.live && <div style={{ marginTop: 14 }}>

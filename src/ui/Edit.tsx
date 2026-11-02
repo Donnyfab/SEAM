@@ -1,11 +1,20 @@
 import { t as translate } from '../i18n'
 import { useRef, useState } from 'preact/hooks'
 import { notify, setArtwork, trackById, updateTrack } from '../state'
-import { Art } from './common'
+import { Art, useSheet } from './common'
+
+/** Unsaved edits survive closing the sheet by accident (kept in memory until saved). */
+interface EditForm { title: string; artist: string; albumArtist: string; album: string; genre: string; composer: string; year: string; trackNo: string; comment: string; lyrics: string; kind: 'music' | 'audiobook' }
+const drafts = new Map<string, EditForm>()
 
 export function EditTrack({ id, onClose }: { id: string; onClose: () => void }) {
   const t = trackById.value.get(id)
-  const [f, setF] = useState(() => ({ title: t?.title ?? '', artist: t?.artist ?? '', albumArtist: t?.albumArtist ?? '', album: t?.album ?? '', genre: t?.genre ?? '', composer: t?.composer ?? '', year: t?.year?.toString() ?? '', trackNo: t?.trackNo?.toString() ?? '', comment: t?.comment ?? '', lyrics: t?.lyrics ?? '', kind: t?.kind ?? 'music' }))
+  const { ref } = useSheet(onClose)
+  const [f, setFRaw] = useState<EditForm>(() => drafts.get(id) ?? {
+    title: t?.title ?? '', artist: t?.artist ?? '', albumArtist: t?.albumArtist ?? '', album: t?.album ?? '', genre: t?.genre ?? '', composer: t?.composer ?? '',
+    year: t?.year?.toString() ?? '', trackNo: t?.trackNo?.toString() ?? '', comment: t?.comment ?? '', lyrics: t?.lyrics ?? '', kind: t?.kind ?? 'music',
+  })
+  const setF = (n: EditForm) => { drafts.set(id, n); setFRaw(n) }
   const pic = useRef<HTMLInputElement>(null)
   if (!t) return null
   const field = (k: keyof typeof f, label: string, mode?: 'numeric') => (
@@ -15,10 +24,10 @@ export function EditTrack({ id, onClose }: { id: string; onClose: () => void }) 
   const save = async () => {
     const num = (s: string) => (s.trim() && Number.isFinite(Number(s)) ? Number(s) : undefined)
     await updateTrack(id, { title: f.title.trim() || t.title, artist: f.artist.trim() || translate("Unknown Artist"), albumArtist: f.albumArtist.trim() || undefined, album: f.album.trim() || translate("Unknown Album"), genre: f.genre.trim() || undefined, composer: f.composer.trim() || undefined, year: num(f.year), trackNo: num(f.trackNo), comment: f.comment.trim() || undefined, lyrics: f.lyrics.trim() || undefined, kind: f.kind as 'music' | 'audiobook' })
-    notify(translate("Saved")); onClose()
+    drafts.delete(id); notify(translate("Saved")); onClose()
   }
   return (
-    <div class="sheet" role="dialog" aria-label={translate("Edit song info")}>
+    <div class="sheet" role="dialog" aria-modal="true" aria-label={translate("Edit song info")} ref={ref} tabIndex={-1}>
       <div class="nav" style={{ margin: '-12px -24px 8px' }}><button class="side" onClick={onClose}>{translate("Cancel")}</button><h1>{translate("Edit info")}</h1><button class="side right" onClick={save}>{translate("Save")}</button></div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '8px 0' }}>
         <Art id={id} /><button class="btn small secondary" onClick={() => pic.current?.click()}>{translate("Change artwork…")}</button>
